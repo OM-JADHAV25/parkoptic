@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Logs
+*.log
+pipeline.log
+
+# Raw Data
+backend/data/raw/*
+!backend/data/raw/.gitkeep
+
+# Processed Data
+backend/data/processed/*
+!backend/data/processed/.gitkeep
+
+backend/data/outputs/*
+!backend/data/outputs/.gitkeep
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
