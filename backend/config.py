@@ -17,3 +17,6 @@ DOCS_DIR = (PROJECT_ROOT.parent/ "docs")
 
 # Raw Dataset
 RAW_DATA_PATH = (RAW_DIR/ "violations.csv")
+
+# Artifacts Path
+ARTIFACTS_DIR = (PROJECT_ROOT/"artifacts")
