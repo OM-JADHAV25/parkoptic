@@ -1,9 +1,19 @@
 from pathlib import Path
 
+
+# Project Paths
 PROJECT_ROOT = Path(__file__).resolve().parent
 
-RAW_DATA_PATH = PROJECT_ROOT / "data" / "raw" / "violations.csv"
+DATA_DIR = (PROJECT_ROOT/ "data")
 
-PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
+RAW_DIR = (DATA_DIR/ "raw")
 
-DOCS_DIR = PROJECT_ROOT.parent / "docs"
+PROCESSED_DIR = (DATA_DIR/ "processed")
+
+ML_DIR = (DATA_DIR/ "ml")
+
+DOCS_DIR = (PROJECT_ROOT.parent/ "docs")
+
+
+# Raw Dataset
+RAW_DATA_PATH = (RAW_DIR/ "violations.csv")
