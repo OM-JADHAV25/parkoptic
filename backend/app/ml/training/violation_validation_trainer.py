@@ -77,9 +77,9 @@ class ViolationValidationTrainer:
         LOG.info(f"Test rows: {len(X_test):,}")
 
         model = CatBoostClassifier(
-            iterations=500,
+            iterations=1000,
             depth=8,
-            learning_rate=0.05,
+            learning_rate=0.03,
             loss_function="Logloss",
             eval_metric="AUC",
             random_seed=42,
@@ -182,28 +182,21 @@ class ViolationValidationTrainer:
 
 ## Dataset
 
-Train Rows:
-{len(X_train):,}
+Train Rows: {len(X_train):,}
 
-Test Rows:
-{len(X_test):,}
+Test Rows: {len(X_test):,}
 
 ## Metrics
 
-Accuracy:
-{accuracy:.4f}
+Accuracy: {accuracy:.4f}
 
-Precision:
-{precision:.4f}
+Precision: {precision:.4f}
 
-Recall:
-{recall:.4f}
+Recall: {recall:.4f}
 
-F1 Score:
-{f1:.4f}
+F1 Score: {f1:.4f}
 
-ROC-AUC:
-{roc_auc:.4f}
+ROC-AUC: {roc_auc:.4f}
 
 ## Confusion Matrix
 

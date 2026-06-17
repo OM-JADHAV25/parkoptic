@@ -2,7 +2,10 @@
 ParkOptic - Validation Classifier Feature Builder
 
 Purpose:
-    Build training dataset for the violation validation classifier.
+    Build training dataset for the violationvalidation classifier.
+
+Problem:
+    Predict whether a parking violation will beAPPROVED or REJECTED / DUPLICATE.
 
 Inputs:
     cleaned_violations.parquet
@@ -11,8 +14,6 @@ Outputs:
     Training-ready DataFrame
 """
 
-from pathlib import Path
-
 import pandas as pd
 
 from config import PROCESSED_DIR
@@ -20,7 +21,8 @@ from config import PROCESSED_DIR
 
 class ValidationFeatureBuilder:
     """
-    Builds feature set for the validation classifier.
+    Builds feature set for the violation
+    validation model.
     """
 
     VALID_STATUSES = [
@@ -41,6 +43,11 @@ class ValidationFeatureBuilder:
         "latitude",
         "longitude",
         "is_weekend",
+        "vehicle_violation_count",
+        "is_repeat_offender",
+        "device_total_records",
+        "junction_total_violations",
+        "station_total_violations",
     ]
 
     CATEGORICAL_COLUMNS = [
@@ -58,6 +65,11 @@ class ValidationFeatureBuilder:
         "latitude",
         "longitude",
         "is_weekend",
+        "vehicle_violation_count",
+        "is_repeat_offender",
+        "device_total_records",
+        "junction_total_violations",
+        "station_total_violations",
     ]
 
     TARGET_COLUMN = "target"
@@ -71,10 +83,7 @@ class ValidationFeatureBuilder:
         Returns
         -------
         tuple
-            (
-                training_dataset,
-                metadata_dataset
-            )
+            (training_dataset,metadata_dataset)
         """
 
         input_path = (PROCESSED_DIR/"cleaned_violations.parquet")
@@ -85,7 +94,7 @@ class ValidationFeatureBuilder:
 
         df = pd.read_parquet(input_path)
 
-  
+
         # Keep Only Labeled Records
         df = df[
             df["validation_status"]
@@ -105,6 +114,62 @@ class ValidationFeatureBuilder:
         )
 
 
+        # Feature Engineering
+        # =================================
+
+        # Vehicle Behavioral Features
+        vehicle_counts = (
+            df.groupby("final_vehicle_number")
+            .size()
+        )
+
+        df["vehicle_violation_count"] = (
+            df["final_vehicle_number"]
+            .map(vehicle_counts)
+        )
+
+        df["is_repeat_offender"] = (
+            (df["vehicle_violation_count"] > 1)
+            .astype(int)
+        )
+
+
+        # Device Activity Features
+        device_counts = (
+            df.groupby("device_id")
+            .size()
+        )
+
+        df["device_total_records"] = (
+            df["device_id"]
+            .map(device_counts)
+        )
+
+
+        # Junction Activity Features
+        junction_counts = (
+            df.groupby("junction_name")
+            .size()
+        )
+
+        df["junction_total_violations"] = (
+            df["junction_name"]
+            .map(junction_counts)
+        )
+
+
+        # Police Station Activity Features
+        station_counts = (
+            df.groupby("police_station")
+            .size()
+        )
+
+        df["station_total_violations"] = (
+            df["police_station"]
+            .map(station_counts)
+        )
+
+
         # Metadata
         available_metadata = [
             column
@@ -115,11 +180,13 @@ class ValidationFeatureBuilder:
         metadata = (
             df[available_metadata].copy()
             if available_metadata
-            else pd.DataFrame(index=df.index)
+            else pd.DataFrame(
+                index=df.index
+            )
         )
 
 
-        # Feature Selection
+        # Feature Validation
         missing_columns = [
             column
             for column in self.FEATURE_COLUMNS
@@ -133,6 +200,8 @@ class ValidationFeatureBuilder:
                 f"{missing_columns}"
             )
 
+
+        # Dataset Creation
         dataset = df[
             self.FEATURE_COLUMNS
             +
@@ -172,6 +241,8 @@ class ValidationFeatureBuilder:
         # Final Validation
         if dataset.empty:
 
-            raise ValueError("Generated dataset is empty.")
+            raise ValueError(
+                "Generated dataset is empty."
+            )
 
         return (dataset,metadata)

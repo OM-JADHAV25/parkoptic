@@ -3,20 +3,15 @@
 
 ## Overview
 
-Rows:
-165,396
+Rows: 165,396
 
-Columns:
-12
+Columns: 17
 
-Approved Records:
-115,350
+Approved Records: 115,350
 
-Rejected/Duplicate Records:
-50,046
+Rejected/Duplicate Records: 50,046
 
-Approval Rate:
-69.74%
+Approval Rate: 69.74%
 
 ## Target Distribution
 

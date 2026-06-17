@@ -66,20 +66,15 @@ def main():
 
 ## Overview
 
-Rows:
-{len(dataset):,}
+Rows: {len(dataset):,}
 
-Columns:
-{len(dataset.columns)}
+Columns: {len(dataset.columns)}
 
-Approved Records:
-{approved_count:,}
+Approved Records: {approved_count:,}
 
-Rejected/Duplicate Records:
-{rejected_count:,}
+Rejected/Duplicate Records: {rejected_count:,}
 
-Approval Rate:
-{approval_rate:.2f}%
+Approval Rate: {approval_rate:.2f}%
 
 ## Target Distribution
 
