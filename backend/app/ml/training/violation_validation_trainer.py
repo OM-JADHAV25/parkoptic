@@ -23,7 +23,7 @@ from sklearn.model_selection import train_test_split
 
 from sklearn.metrics import (accuracy_score,precision_score,recall_score,f1_score,roc_auc_score,confusion_matrix,)
 
-from config import (ML_DIR,DOCS_DIR,)
+from config import (ML_DIR,DOCS_DIR)
 
 from utils.logger import LOG
 
