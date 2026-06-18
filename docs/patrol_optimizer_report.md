@@ -3,35 +3,36 @@
 
 ## Overview
 
-Total Zones:
-2,517
+Total Zones: 2,517
 
-Average Deployment Score:
-24.29
+Average Deployment Score: 16.10
 
-Maximum Deployment Score:
-87.74
+Maximum Deployment Score: 83.25
 
+Average Recommended Patrol Units: 1.17
 
-## Action Distribution
+Immediate Deployments: 2
 
-recommended_action
-Monitor and schedule patrol       1516
-Increase patrol frequency          539
-Routine monitoring                 435
-Immediate targeted enforcement      27
+Average Operational Risk Reduction: 38.69%
+
+## Deployment Priority Distribution
+# deployment_priority
+ROUTINE      2115
+MEDIUM        366
+HIGH           34
+IMMEDIATE       2
 
 
 ## Top 10 Deployment Zones
 
- deployment_rank        h3_index  deployment_score  visibility_gap_index  tdpi_score gap_category hotspot_tier             recommended_action  total_violations
-               1 89618920923ffff             87.74                 32.15       60.46 CRITICAL_GAP       TIER_1 Immediate targeted enforcement              6749
-               2 8960145b613ffff             81.93                  35.7        44.9 CRITICAL_GAP       TIER_2 Immediate targeted enforcement                46
-               3 8960145b147ffff             81.34                 34.16       49.46 CRITICAL_GAP       TIER_2 Immediate targeted enforcement              1055
-               4 8960145b4cbffff             79.37                 28.01       57.05     HIGH_GAP       TIER_1      Increase patrol frequency              2009
-               5 8960145a26bffff              78.2                 26.57       59.89     HIGH_GAP       TIER_1      Increase patrol frequency              3653
-               6 8960145a30bffff             76.65                 33.91       39.57 CRITICAL_GAP       TIER_2 Immediate targeted enforcement               680
-               7 89618925a27ffff             76.55                 33.18       42.16 CRITICAL_GAP       TIER_2 Immediate targeted enforcement               340
-               8 8961892eeb3ffff              76.2                 33.61       39.69 CRITICAL_GAP       TIER_2 Immediate targeted enforcement               155
-               9 8961892c9d7ffff             75.01                 30.08       50.55 CRITICAL_GAP       TIER_2 Immediate targeted enforcement              1754
-              10 8960145b6a7ffff             74.99                 25.95       54.86     HIGH_GAP       TIER_1      Increase patrol frequency              1637
+ deployment_rank        h3_index  deployment_score deployment_priority  recommended_patrol_units  tdpi_score  visibility_gap_index  predicted_violations  estimated_operational_risk_reduction                                                             recommendation_reason
+               1 8960145b553ffff             83.25           IMMEDIATE                         4       75.17                 19.12            221.210000                                 44.26                                 High hotspot severity, rapid forecast escalation.
+               2 8960145b59bffff             76.38           IMMEDIATE                         4       68.52                 18.66            215.255000                                  30.2                             Moderate hotspot severity, rapid forecast escalation.
+               3 89618920923ffff             71.52                HIGH                         3       60.46                 32.15            140.030000                                 33.03 Moderate hotspot severity, low enforcement visibility, increasing parking demand.
+               4 8960145b427ffff             66.59                HIGH                         3        68.2                 12.15            183.010000                                 44.05                             Moderate hotspot severity, rapid forecast escalation.
+               5 8961892e917ffff             64.58                HIGH                         3       61.89                 19.07            153.920000                                 36.18                             Moderate hotspot severity, increasing parking demand.
+               6 8961892e9abffff             64.06                HIGH                         3       63.88                 17.68            167.602500                                 42.67                             Moderate hotspot severity, rapid forecast escalation.
+               7 8960145b3a7ffff             62.21                HIGH                         3       64.07                 19.71             93.925000                                 39.39                                                        Moderate hotspot severity.
+               8 8960145b4cbffff             62.04                HIGH                         3       57.05                 28.01             58.040000                                  41.4                               Moderate hotspot severity, limited patrol coverage.
+               9 8960145b5cbffff             61.87                HIGH                         3       65.96                   7.9            186.342500                                 41.18                             Moderate hotspot severity, rapid forecast escalation.
+              10 8960145a26bffff             59.69                HIGH                         3       59.89                 26.57             63.003333                                  45.8                               Moderate hotspot severity, limited patrol coverage.

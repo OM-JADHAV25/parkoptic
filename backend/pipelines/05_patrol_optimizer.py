@@ -30,8 +30,7 @@ from config import (PROCESSED_DIR,DOCS_DIR,)
 
 from utils.logger import LOG
 
-from app.services.patrol_optimizer_service import (PatrolOptimizerService,)
-
+from app.services.smart_patrol_allocation_service import (SmartPatrolAllocationService)
 
 def main():
 
@@ -43,9 +42,23 @@ def main():
 
     df = pd.read_parquet(input_path)
 
+    forecast = pd.read_parquet(PROCESSED_DIR/"forecast_predictions.parquet")
+
+    forecast = (
+        forecast.groupby("h3_index", as_index=False)
+            .agg(predicted_violations=("predicted_violations", "mean")
+        )
+    )
+
+    df = df.merge(forecast,on="h3_index",how="left")
+
+    df["predicted_violations"] = (
+        df["predicted_violations"].fillna(0)
+    )
+
     LOG.info(f"Loaded {len(df):,} zones")
 
-    service = PatrolOptimizerService()
+    service = SmartPatrolAllocationService()
 
     result = service.calculate(df)
 
@@ -58,10 +71,9 @@ def main():
     LOG.info(f"Saved recommendations to {output_path}")
 
 
-    # Action Distribution
-    action_distribution = (
-        result["recommended_action"]
-        .value_counts()
+    # Priority Distribution
+    priority_distribution = (
+        result["deployment_priority"].value_counts()
     )
 
 
@@ -72,12 +84,13 @@ def main():
                 "deployment_rank",
                 "h3_index",
                 "deployment_score",
-                "visibility_gap_index",
+                "deployment_priority",
+                "recommended_patrol_units",
                 "tdpi_score",
-                "gap_category",
-                "hotspot_tier",
-                "recommended_action",
-                "total_violations",
+                "visibility_gap_index",
+                "predicted_violations",
+                "estimated_operational_risk_reduction",
+                "recommendation_reason",
             ]
         ]
         .sort_values(
@@ -98,19 +111,20 @@ def main():
 
 ## Overview
 
-Total Zones:
-{len(result):,}
+Total Zones: {len(result):,}
 
-Average Deployment Score:
-{result["deployment_score"].mean():.2f}
+Average Deployment Score: {result["deployment_score"].mean():.2f}
 
-Maximum Deployment Score:
-{result["deployment_score"].max():.2f}
+Maximum Deployment Score: {result["deployment_score"].max():.2f}
 
+Average Recommended Patrol Units: {result["recommended_patrol_units"].mean():.2f}
 
-## Action Distribution
+Immediate Deployments: {(result["deployment_priority"]=="IMMEDIATE").sum()}
 
-{action_distribution.to_string()}
+Average Operational Risk Reduction: {result["estimated_operational_risk_reduction"].mean():.2f}%
+
+## Deployment Priority Distribution
+# {priority_distribution.to_string()}
 
 
 ## Top 10 Deployment Zones
