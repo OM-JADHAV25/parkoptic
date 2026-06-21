@@ -34,6 +34,11 @@ class Settings(BaseSettings):
         default_factory=lambda: [
             "http://localhost:3000",
             "http://127.0.0.1:3000",
+
+            # Vercel production
+            "https://parkoptic.vercel.app",
+
+            # Preview deployment
             "https://parkoptic-git-main-om-jadhavs-projects-c4ec56bb.vercel.app",
         ]
     )
