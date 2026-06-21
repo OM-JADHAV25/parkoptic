@@ -1,0 +1,122 @@
+.layoutContainer {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  padding: 24px;
+  gap: 24px;
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+}
+
+.mainWrapper {
+  flex-grow: 1;
+  margin-left: 304px; /* 280px (sidebar) + 24px (gap) */
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  height: calc(100vh - 48px);
+  min-width: 0; /* Prevents overflow flex items from expanding beyond parent */
+}
+
+/* Command Palette Overlay Modal */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: var(--z-overlay);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+}
+
+.palette {
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-lg);
+  width: 500px;
+  max-width: 90%;
+  box-shadow: var(--shadow-lg), var(--shadow-glow-brand);
+  overflow: hidden;
+  animation: scaleUp 0.15s ease-out;
+}
+
+.paletteInputWrapper {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border-base);
+  gap: var(--spacing-xs);
+}
+
+.paletteInput {
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary);
+  font-size: 1rem;
+  width: 100%;
+  outline: none;
+  font-family: inherit;
+}
+
+.paletteResults {
+  max-height: 250px;
+  overflow-y: auto;
+  padding: var(--spacing-xs);
+}
+
+.paletteItem {
+  padding: 10px var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all var(--transition-fast);
+}
+
+.paletteItem:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+  color: var(--color-text-primary);
+}
+
+.paletteShortcut {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+@keyframes scaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Responsiveness overrides */
+@media (max-width: 1024px) {
+  .mainWrapper {
+    margin-left: 0;
+  }
+  
+  .layoutContainer {
+    padding: var(--spacing-sm);
+    gap: var(--spacing-sm);
+  }
+  
+  .mainWrapper {
+    height: calc(100vh - 2 * var(--spacing-sm));
+    gap: var(--spacing-sm);
+  }
+}

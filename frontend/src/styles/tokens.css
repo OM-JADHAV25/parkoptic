@@ -1,0 +1,77 @@
+/* Design Tokens - ParkOptic */
+
+:root {
+  /* Color Palette - Premium Monitoring Dark Theme */
+  --color-bg-base: #070913;          /* Deep monitoring background */
+  --color-surface-base: #0c0f1d;     /* Solid card and inner block backgrounds */
+  --color-surface-card: #111528;     /* Floating card surface */
+  --color-surface-glass: rgba(13, 17, 32, 0.65); /* Translucent floating regions */
+  
+  /* Borders and Dividers */
+  --color-border-base: rgba(255, 255, 255, 0.05);
+  --color-border-card: rgba(255, 255, 255, 0.08);
+  --color-border-glass: rgba(255, 255, 255, 0.08);
+  --color-border-active: rgba(59, 130, 246, 0.4);
+  
+  /* Brand and Accent Colors */
+  --color-brand: #3b82f6;            /* Bengaluru Blue (Primary UI focus) */
+  --color-brand-glow: rgba(59, 130, 246, 0.15);
+  --color-brand-hover: #60a5fa;
+  
+  /* System Status States */
+  --color-success: #10b981;          /* Emerald Success (Free flow, Normal status) */
+  --color-success-bg: rgba(16, 185, 129, 0.1);
+  --color-success-border: rgba(16, 185, 129, 0.2);
+  
+  --color-warning: #f59e0b;          /* Amber Warning (Moderate congestion) */
+  --color-warning-bg: rgba(245, 158, 11, 0.1);
+  --color-warning-border: rgba(245, 158, 11, 0.2);
+  
+  --color-critical: #ef4444;         /* Crimson Critical (Severe blockages / Violations) */
+  --color-critical-bg: rgba(239, 68, 68, 0.1);
+  --color-critical-border: rgba(239, 68, 68, 0.2);
+  --color-critical-glow: rgba(239, 68, 68, 0.25);
+  
+  --color-info: #06b6d4;             /* Cyan Info (AI alerts, analytical highlights) */
+  --color-info-bg: rgba(6, 182, 212, 0.1);
+  
+  /* Typography / Text colors */
+  --color-text-primary: #f8fafc;     /* Crisp white for readable labels */
+  --color-text-secondary: #94a3b8;   /* Muted slate gray for secondary info */
+  --color-text-muted: #475569;       /* Dark slate gray for icons, descriptions */
+  
+  /* Spacing Grid (8px Multiples) */
+  --spacing-xxs: 4px;
+  --spacing-xs: 8px;
+  --spacing-sm: 16px;
+  --spacing-md: 24px;
+  --spacing-lg: 32px;
+  --spacing-xl: 48px;
+  --spacing-xxl: 64px;
+  
+  /* Border Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+  
+  /* Layering Z-Indices */
+  --z-base: 1;
+  --z-workspace: 10;
+  --z-topnav: 100;
+  --z-sidebar: 200;
+  --z-overlay: 1000;
+  --z-tooltip: 2000;
+  
+  /* Shadow Levels */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-glow-brand: 0 0 15px rgba(59, 130, 246, 0.2);
+  --shadow-glow-critical: 0 0 15px rgba(239, 68, 68, 0.2);
+  
+  /* Animation Durations */
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}

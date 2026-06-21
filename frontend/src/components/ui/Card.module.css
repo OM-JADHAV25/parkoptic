@@ -1,0 +1,100 @@
+.card {
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-sm);
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+  box-sizing: border-box;
+}
+
+/* Variants */
+.default {
+  background-color: var(--color-surface-base);
+  border: 1px solid var(--color-border-base);
+}
+
+.glass {
+  background: var(--color-surface-glass);
+  border: 1px solid var(--color-border-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.elevated {
+  background-color: var(--color-surface-card);
+  border: 1px solid var(--color-border-card);
+  box-shadow: var(--shadow-md);
+}
+
+.success {
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+}
+
+.warning {
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+}
+
+.critical {
+  background: var(--color-critical-bg);
+  border: 1px solid var(--color-critical-border);
+  box-shadow: var(--shadow-glow-critical);
+}
+
+/* Hover effects */
+.interactive {
+  cursor: pointer;
+}
+
+.interactive:hover {
+  transform: translateY(-2px);
+}
+
+.default.interactive:hover {
+  border-color: var(--color-border-active);
+}
+
+.glass.interactive:hover {
+  background: rgba(13, 17, 32, 0.85);
+  border-color: var(--color-border-active);
+}
+
+.elevated.interactive:hover {
+  box-shadow: var(--shadow-lg), var(--shadow-glow-brand);
+  border-color: var(--color-border-active);
+}
+
+/* Card Sub-components styles */
+.header {
+  margin-bottom: var(--spacing-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-xxs);
+}
+
+.body {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.footer {
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-xs);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
