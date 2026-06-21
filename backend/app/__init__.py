@@ -1,0 +1,1 @@
+"""ParkOptic FastAPI application package."""
