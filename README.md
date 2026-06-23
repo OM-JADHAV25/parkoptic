@@ -8,13 +8,28 @@
 
 ---
 
-[![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
-[![Next.js](https://img.shields.io/badge/Next.js-Frontend-black?logo=next.js)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
-[![CatBoost](https://img.shields.io/badge/CatBoost-Machine%20Learning-orange)](https://catboost.ai/)
-[![H3](https://img.shields.io/badge/Uber-H3-1E88E5)](https://h3geo.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-Frontend-000000?logo=nextdotjs&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
+
+![Pandas](https://img.shields.io/badge/Pandas-150458?logo=pandas&logoColor=white)
+![NumPy](https://img.shields.io/badge/NumPy-013243?logo=numpy&logoColor=white)
+![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-F7931E?logo=scikitlearn&logoColor=white)
+![CatBoost](https://img.shields.io/badge/CatBoost-Machine_Learning-FF9800)
+
+![Uber H3](https://img.shields.io/badge/Uber-H3-1E88E5)
+![Deck.GL](https://img.shields.io/badge/Deck.GL-Visualization-7B61FF)
+![MapLibre](https://img.shields.io/badge/MapLibre-Maps-00A76F)
+![Apache Parquet](https://img.shields.io/badge/Apache-Parquet-50A14F)
+![React Query](https://img.shields.io/badge/TanStack-React_Query-FF4154)
+
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?logo=vercel&logoColor=white)
+![Northflank](https://img.shields.io/badge/Northflank-Backend-4F46E5)
+![License](https://img.shields.io/badge/License-MIT-success)
 
 ---
 
@@ -35,14 +50,11 @@ The platform follows a layered intelligence pipeline that integrates Traffic Dis
 
 ---
 
-## Live Demonstration
+## Access ParkOptic
 
 | Resource | Link |
 |----------|------|
-| **Live Application** | https://parkoptic.vercel.app |
-| **Backend API** | *(Add your Cloud Run URL)* |
-| **Engineering Design Document** | `docs/ParkOptic_Engineering_Design_Document.pdf` |
-| **Presentation** | *(Add PPT/PDF link if available)* |
+| **ParkOptic Platform** | https://parkoptic.vercel.app |
 
 ---
 
@@ -150,3 +162,115 @@ ParkOptic
 ├── LICENSE
 └── README.md
 ```
+
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+Ensure the following software is installed:
+
+- Python **3.12+**
+- Node.js **20+**
+- npm
+- Git
+- Docker *(Optional)*
+
+---
+
+### Clone the Repository
+
+```bash
+git clone https://github.com/OM-JADHAV25/parkoptic.git
+cd parkoptic
+```
+
+---
+
+### Backend Setup
+
+Navigate to the backend directory:
+
+```bash
+cd backend
+```
+
+Create a virtual environment:
+
+```bash
+python -m venv .venv
+```
+
+Activate the virtual environment:
+
+**Windows (CMD)**
+
+```bash
+.venv\Scripts\activate
+```
+
+**Linux / macOS**
+
+```bash
+source .venv/bin/activate
+```
+
+Install the required dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Create a local environment file:
+
+```text
+Copy .env.example → .env
+```
+
+Start the FastAPI development server:
+
+```bash
+uvicorn app.main:app --reload
+```
+
+The backend will be available at:
+
+```text
+http://127.0.0.1:8000
+```
+
+---
+
+### Frontend Setup
+
+Open a new terminal and navigate to the frontend directory:
+
+```bash
+cd frontend
+```
+
+Install the required dependencies:
+
+```bash
+npm install
+```
+
+Create a local environment file:
+
+```text
+Copy .env.example → .env
+```
+
+Start the Next.js development server:
+
+```bash
+npm run dev
+```
+
+The frontend will be available at:
+
+```text
+http://localhost:3000
+```
+
+---
