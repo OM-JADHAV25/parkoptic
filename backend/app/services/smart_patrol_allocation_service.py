@@ -67,7 +67,6 @@ class SmartPatrolAllocationService:
         "total_violations"
     ]
 
-
     # Validation
     def _validate(
         self,
@@ -106,8 +105,12 @@ class SmartPatrolAllocationService:
         self,
         df: pd.DataFrame,
     ) -> pd.DataFrame:
+        
+        junction_score = minmax_scale(df["junctions"])
 
-        raw_score = (0.60 * df["junctions"] + 0.40 * df["police_stations"])
+        police_score = minmax_scale(df["police_stations"])
+
+        raw_score = (0.60 * junction_score + 0.40 * police_score)
 
         df["spatial_criticality"] = (minmax_scale(raw_score))
 
@@ -233,11 +236,22 @@ class SmartPatrolAllocationService:
         self,
         df: pd.DataFrame,
     ) -> pd.DataFrame:
+        
+        effectiveness = (df["approved_violations"]/df["total_violations"]).fillna(0)
 
-        df["estimated_tdpi_reduction"] = (
+        effectiveness = (effectiveness.replace([np.inf, -np.inf], 0).fillna(0).clip(0, 1))
+
+        patrol_capacity = (df["recommended_patrol_units"] * 12)
+
+        expected_addressed = (df["predicted_violations"] * effectiveness)
+
+        estimated_addressed = np.minimum(patrol_capacity,expected_addressed)
+
+        reduction_ratio = (estimated_addressed/df["predicted_violations"].clip(lower=1)).clip(0,1)
+
+        df["estimated_tdpi_reduction"] = ( 
             df["tdpi_score"]
-            *
-            (df["historical_enforcement_rate"]/ 100)
+            * reduction_ratio
         ).round(2)
 
         return df
@@ -378,6 +392,7 @@ class SmartPatrolAllocationService:
             # Existing Intelligence
             "tdpi_score",
             "visibility_gap_index",
+            "coverage_score",
             "hotspot_tier",
 
             # Forecast

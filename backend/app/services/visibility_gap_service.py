@@ -36,16 +36,14 @@ class VisibilityGapService:
             minmax_scale( result["active_days"])
         )
 
-        result["confidence_coverage_score"] = (result["approval_rate"] * 100)
+        # removed -> result["confidence_coverage_score"] = (result["approval_rate"] * 100)
 
 
         # Coverage Score
         result["coverage_score"] = (
-            result["device_coverage_score"] * 0.50
+            result["device_coverage_score"] * 0.60
             +
-            result["patrol_frequency_score"] * 0.30
-            +
-            result["confidence_coverage_score"] * 0.20
+            result["patrol_frequency_score"] * 0.40
         )
 
         result["coverage_score"] = (
@@ -57,9 +55,7 @@ class VisibilityGapService:
 
         # Visibility Gap Index
         result["visibility_gap_index"] = (
-            result["tdpi_score"]
-            *
-            (1 - (result["coverage_score"] / 100))
+            result["tdpi_score"] * (1 - (result["coverage_score"] / 100))
         )
 
         result["visibility_gap_index"] = (

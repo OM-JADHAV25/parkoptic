@@ -20,7 +20,6 @@ class HotspotRepository:
     hotspot cache for maximum performance.
     """
 
-
     # Get All Hotspots
     def all(self) -> list[dict[str, Any]]:
         """
@@ -40,7 +39,6 @@ class HotspotRepository:
 
         return data_store.hotspot_cache.get(h3_index)
 
-  
     # Exists
     def exists(
         self,
@@ -49,13 +47,11 @@ class HotspotRepository:
 
         return (h3_index in data_store.hotspot_cache)
 
-  
     # Count
     def count(self) -> int:
 
         return len(data_store.hotspot_cache)
 
-    
     # Search
     def search(
         self,
@@ -87,7 +83,6 @@ class HotspotRepository:
 
         return results
 
-
     # Top Hotspots
     def top(
         self,
@@ -98,18 +93,15 @@ class HotspotRepository:
         """
 
         hotspots = sorted(
-
             data_store.hotspot_cache.values(),
-
             key=lambda hotspot: (
                 hotspot
                 .get("deployment", {})
-                .get("deployment_rank",999999)
+                .get("deployment_rank", 999999)
             )
         )
 
         return hotspots[:limit]
-
 
     # Map Summary
     def map_summary(self) -> list[dict[str, Any]]:
@@ -130,6 +122,7 @@ class HotspotRepository:
                 "latitude": hotspot["latitude"],
                 "longitude": hotspot["longitude"],
                 "tdpi_score": tdpi.get("tdpi_score"),
+                "tdpi_percentile": tdpi.get("tdpi_percentile"),
                 "hotspot_tier": tdpi.get("hotspot_tier"),
                 "risk_category": tdpi.get("risk_category"),
                 "visibility_gap_index": (
@@ -140,7 +133,6 @@ class HotspotRepository:
                 "deployment_priority": (
                     deployment.get("deployment_priority")
                 ),
-
                 "deployment_score": (
                     deployment.get("deployment_score")
                 )

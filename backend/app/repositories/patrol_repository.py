@@ -28,7 +28,16 @@ class PatrolRepository:
 
     def dataframe(self) -> pd.DataFrame:
         """Return the full patrol recommendations DataFrame (read-only view)."""
-        return data_store.get("patrol")
+        df = data_store.get("patrol").copy()
+        try:
+            tdpi_df = data_store.get("tdpi")
+            if tdpi_df is not None and not tdpi_df.empty:
+                tdpi_subset = tdpi_df[["h3_index", "tdpi_percentile"]]
+                tdpi_subset = tdpi_subset.drop_duplicates("h3_index")
+                df = df.merge(tdpi_subset, on="h3_index", how="left")
+        except Exception:
+            pass
+        return df
 
     def all(
         self,

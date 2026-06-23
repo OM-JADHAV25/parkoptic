@@ -69,7 +69,13 @@ async def simulate_patrol_allocation(
         result = patrol_simulation_service.simulate(body.allocations, hour=hour)
         return result
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+       import traceback
+
+       traceback.print_exc()
+
+       print("ERROR:", exc)
+
+       raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Simulation failed: {exc}")
 

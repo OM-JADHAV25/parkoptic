@@ -86,11 +86,42 @@ class PatrolSimulationService:
         # Obtain the baseline patrol DataFrame.
         baseline_df = patrol_repository.dataframe().copy()
         
-        # Keep track of baseline recommended patrols for scaling logic
-        baseline_df["baseline_patrol_units"] = baseline_df["recommended_patrol_units"]
+        # Left join visibility dataset to restore visibility metadata
+        try:
+            from app.core.data_store import data_store
+            visibility_df = data_store.get("visibility")
+            print("=" * 80)
+            print("VISIBILITY DATASET COLUMNS")
+            print(visibility_df.columns.tolist())
+            print("=" * 80)
+            if visibility_df is not None and not visibility_df.empty:
+                vis_cols = [
+                    "h3_index",
+                    "device_coverage_score", "patrol_frequency_score", "confidence_coverage_score"
+                ]
+                vis_subset = visibility_df[[c for c in vis_cols if c in visibility_df.columns]]
+                baseline_df = baseline_df.merge(vis_subset, on="h3_index", how="left")
+                print("=" * 80)
+                print("BASELINE DATASET COLUMNS AFTER MERGE")
+                print(baseline_df.columns.tolist())
+                print("=" * 80)
+        except Exception as e:
+            LOG.error(f"Failed to merge visibility data into simulation baseline: {e}")
+
+        # Left join tdpi dataset to restore tdpi_percentile metadata
+        try:
+            from app.core.data_store import data_store
+            tdpi_df = data_store.get("tdpi")
+            if tdpi_df is not None and not tdpi_df.empty:
+                tdpi_subset = tdpi_df[["h3_index", "tdpi_percentile"]]
+                tdpi_subset = tdpi_subset[[c for c in tdpi_subset.columns if c not in baseline_df.columns or c == "h3_index"]]
+                baseline_df = baseline_df.merge(tdpi_subset, on="h3_index", how="left")
+        except Exception as e:
+            LOG.error(f"Failed to merge TDPI percentile data into simulation baseline: {e}")
+        
 
         # Validate that the dataset has the required columns for impact calc.
-        self._impact_service._validate(baseline_df)
+        # removed caused already done by baseline_impact -> self._impact_service._validate(baseline_df)
 
         # Apply user overrides to the working copy only.
         working_df = self._apply_overrides(baseline_df.copy(), allocations)
@@ -118,11 +149,16 @@ class PatrolSimulationService:
                 "projected_tdpi",
                 "operational_improvement_percent",
                 "visibility_gap_index",
+                "coverage_score",
+                "device_coverage_score",
+                "patrol_frequency_score",
+                "confidence_coverage_score",
                 "deployment_effectiveness",
                 "patrol_roi",
                 "estimated_remaining_risk",
                 "decision_confidence",
-                "executive_summary"
+                "executive_summary",
+                "tdpi_percentile"
             ]
             for col in cols_to_restore:
                 if col in simulated_impact.columns and col in baseline_impact.columns:
@@ -226,14 +262,10 @@ class PatrolSimulationService:
         weight = merged["temporal_weight"].fillna(1.0 / 24.0)
         
         # Scale variables according to implementation plan
-        df["tdpi_score"] = np.minimum(100.0, df["tdpi_score"] * weight * 24.0).round(2)
-        df["projected_tdpi"] = np.minimum(100.0, df["projected_tdpi"] * weight * 24.0).round(2)
+        #df["tdpi_score"] = np.minimum(100.0, df["tdpi_score"] * weight * 24.0).round(2)
+        #df["projected_tdpi"] = np.minimum(100.0, df["projected_tdpi"] * weight * 24.0).round(2)
         df["predicted_violations"] = (df["predicted_violations"] * weight).round(2)
         df["estimated_weekly_violations_addressed"] = (df["estimated_weekly_violations_addressed"] * weight).round(2)
-        
-        # Optionally, recalculate operational improvement based on hourly TDPI? 
-        # The plan doesn't specify, but let's do it to keep it consistent.
-        # However, the plan only specifies the 4 variables above. We will stick to the plan.
         
         return df
 

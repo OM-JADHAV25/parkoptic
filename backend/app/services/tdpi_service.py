@@ -50,7 +50,7 @@ class TDPIService:
 
 
         # Confidence Score
-        result["confidence_score"] = (
+        result["historical_enforcement_score"] = (
             result["approval_rate"]
             * 100
         )
@@ -73,14 +73,18 @@ class TDPIService:
 
 
         # Spatial Complexity
-        complexity_factor = (
-            result["junctions"]
+        # Normalize each component independently before combining them.
+        junction_score = minmax_scale(result["junctions"])
+        police_station_score = minmax_scale(result["police_stations"])
+
+        result["spatial_complexity_score"] = (
+            junction_score * 0.70
             +
-            result["police_stations"]
+            police_station_score * 0.30
         )
 
         result["spatial_complexity_score"] = (
-            minmax_scale(complexity_factor)
+            result["spatial_complexity_score"].clip(0, 100)
         )
 
 
@@ -90,7 +94,7 @@ class TDPIService:
             +
             result["persistence_score"] * 0.25
             +
-            result["confidence_score"] * 0.15
+            result["historical_enforcement_score"] * 0.15
             +
             result["repeat_pressure_score"] * 0.15
             +

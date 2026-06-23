@@ -12,6 +12,7 @@ class MapHotspot(BaseModel):
     latitude: float
     longitude: float
     tdpi_score: float | None = None
+    tdpi_percentile: float | None = None
     hotspot_tier: str | None = None
     risk_category: str | None = None
     visibility_gap_index: float | None = None

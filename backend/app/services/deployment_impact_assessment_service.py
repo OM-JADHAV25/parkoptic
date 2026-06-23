@@ -48,8 +48,6 @@ class DeploymentImpactAssessmentService:
     ]
 
     PATROL_CAPACITY_PER_UNIT = 12
-    MAX_EFFECTIVENESS = 0.90
-
 
     # Public API
     def calculate(
@@ -102,7 +100,7 @@ class DeploymentImpactAssessmentService:
             .fillna(0)
         )
 
-        effectiveness = effectiveness.clip(upper=self.MAX_EFFECTIVENESS)
+        effectiveness = (effectiveness.replace([np.inf, -np.inf], 0).fillna(0).clip(0, 1))
 
         df["estimated_enforcement_effectiveness"] = (effectiveness.round(3))
 
@@ -131,12 +129,22 @@ class DeploymentImpactAssessmentService:
         self,
         df: pd.DataFrame,
     ) -> pd.DataFrame:
+        
+        reduction_ratio = (df["estimated_weekly_violations_addressed"]/df["predicted_violations"].clip(lower=1))
 
-        projected = (df["tdpi_score"]*(1-df["estimated_enforcement_effectiveness"]))
+        reduction_ratio = reduction_ratio.clip(0, 1)
+
+        df["tdpi_reduction_ratio"] = (reduction_ratio * 100).round(2)
+
+        projected = (df["tdpi_score"]*(1 - reduction_ratio))
 
         projected = projected.clip(lower=0)
 
         df["projected_tdpi"] = (projected.round(2))
+
+        df["estimated_tdpi_reduction"] = (
+            df["tdpi_score"] - df["projected_tdpi"]
+        ).round(2)
 
         return df
     
@@ -290,6 +298,17 @@ class DeploymentImpactAssessmentService:
 
             "tdpi_score",
             "predicted_violations",
+            
+            # Restored Visibility Intelligence
+            "visibility_gap_index",
+            "coverage_score",
+            "device_coverage_score",
+            "patrol_frequency_score",
+            "confidence_coverage_score",
+            "forecast_pressure",
+            "spatial_criticality",
+            "hotspot_tier",
+            "tdpi_percentile",
 
             # Impact Assessment
             "estimated_enforcement_effectiveness",
@@ -304,7 +323,15 @@ class DeploymentImpactAssessmentService:
             "estimated_remaining_risk",
             "decision_confidence",
             "executive_summary",
+            "estimated_tdpi_reduction",
+            "tdpi_reduction_ratio",
         ]
+        
+        # Validation Guard for Critical Operational Fields
+        required_fields = ["visibility_gap_index", "coverage_score"]
+        missing_required = [f for f in required_fields if f not in df.columns]
+        if missing_required:
+            raise ValueError(f"Simulation Pipeline Error: Missing required operational fields before serialization: {missing_required}")
 
         existing_columns = [
             column
