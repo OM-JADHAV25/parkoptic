@@ -10,7 +10,7 @@ export const API_ENDPOINTS = {
   SIMULATE: "/api/v1/patrol/simulate",
   PATROL_RECOMMENDATIONS: "/api/v1/patrol/recommendations",
   DEPLOYMENT_IMPACT: "/api/v1/deployment/impact",
-  TEMPORAL: (hour: number) => `/api/v1/temporal?hour=${hour}`,
+  TEMPORAL: (hour: number) => `/api/v1/temporal/?hour=${hour}`,
 } as const;
 
 export type ApiEndpoints = typeof API_ENDPOINTS;
