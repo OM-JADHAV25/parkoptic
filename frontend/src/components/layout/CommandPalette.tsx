@@ -15,6 +15,7 @@ import { UnifiedSearchItem } from "@/config/command-registry";
 import { Badge } from "@/components/ui";
 import { ArrowRight, Search } from "lucide-react";
 import { Command as CommandPrimitive } from "cmdk";
+import { getSeverityCSS, getSeverityLabel } from "@/utils/severity";
 
 const CATEGORY_ORDER: Record<string, number> = {
   "Pages": 1,
@@ -237,10 +238,11 @@ export function CommandPalette() {
           </div>
           <div className="flex items-center gap-1">
             <span className="text-slate-500 uppercase font-semibold">Status</span>
-            <span className={`font-bold ${
-              cell.tdpi > 70 ? "text-red-400" : cell.tdpi > 40 ? "text-yellow-400" : "text-emerald-400"
-            }`}>
-              {cell.tdpi > 70 ? "Critical" : cell.tdpi > 40 ? "Moderate" : "Nominal"}
+            <span 
+              className="font-bold"
+              style={{ color: getSeverityCSS(cell.hotspotTier, cell.tdpiPercentile) }}
+            >
+              {getSeverityLabel(cell.hotspotTier)}
             </span>
           </div>
         </div>

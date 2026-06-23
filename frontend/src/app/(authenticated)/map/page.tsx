@@ -123,7 +123,10 @@ function DigitalTwinPageInner() {
   }, [isSimulationActive, simData]);
 
   const handleDeployPatrol = (squadId: string, cellIndex: string | null) => {
-    if (!cellIndex) return;
+    if (cellIndex === null) {
+      deployPatrol({ squadId, targetCellIndex: null });
+      return;
+    }
     const targetCell = gridCells.find(c => c.h3Index === cellIndex);
     const center = targetCell ? targetCell.center : undefined;
     deployPatrol({ squadId, targetCellIndex: cellIndex, center });

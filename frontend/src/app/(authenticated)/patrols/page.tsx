@@ -8,6 +8,7 @@ import { usePatrolUnits, useMapIntelligence, usePatrolRecommendations, useDashbo
 import { adaptPatrolOptimizations } from "@/services/adapters";
 import { Shield, Sparkles, Map, AlertTriangle, ArrowRight, Activity, Layers, Focus, Navigation, Target, Check, ChevronDown } from "lucide-react";
 import Link from "next/link";
+import { getSeverityDescription } from "@/utils/severity";
 
 export default function PatrolsPage() {
   const { data: squads = [], isLoading: loadingSquads } = usePatrolUnits();
@@ -17,21 +18,6 @@ export default function PatrolsPage() {
   const { data: simData } = useSimulationData("12:00");
 
   const [selectedBriefing, setSelectedBriefing] = useState<any | null>(null);
-
-  // Algorithmic patrol optimization assignments from the Patrol Optimizer engine
-  const optimizations = adaptPatrolOptimizations(recommendations, squads);
-
-  const coverageIndex = dashboardSummary?.coverageIndex ?? 78;
-
-  const priorityZonesCount = recommendations.filter(
-    (r: any) => r.deployment_priority === "IMMEDIATE" || r.deployment_priority === "HIGH"
-  ).length;
-
-  const activeSquads = squads.filter(s => s.status !== "off-duty");
-  const deployedSquads = activeSquads.filter(s => s.assignedCell !== undefined);
-  const squadDeploymentRate = activeSquads.length > 0
-    ? Math.round((deployedSquads.length / activeSquads.length) * 100)
-    : 0;
 
   const INITIAL_ALLOCATIONS: Record<string, number> = {
     "89618924b93ffff": 1,
@@ -51,6 +37,25 @@ export default function PatrolsPage() {
     Object.keys(allocations).length !== Object.keys(INITIAL_ALLOCATIONS).length ||
     Object.entries(INITIAL_ALLOCATIONS).some(([cell, count]) => allocations[cell] !== count)
   );
+
+  // Algorithmic patrol optimization assignments from the Patrol Optimizer engine
+  const activeRecommendations = (isSimulationActive && simData?.simulated) 
+    ? simData.simulated 
+    : recommendations;
+    
+  const optimizations = adaptPatrolOptimizations(activeRecommendations, squads);
+
+  const coverageIndex = dashboardSummary?.coverageIndex ?? 78;
+
+  const priorityZonesCount = activeRecommendations.filter(
+    (r: any) => r.deployment_priority === "IMMEDIATE" || r.deployment_priority === "HIGH"
+  ).length;
+
+  const activeSquads = squads.filter(s => s.status !== "off-duty");
+  const deployedSquads = activeSquads.filter(s => s.assignedCell !== undefined);
+  const squadDeploymentRate = activeSquads.length > 0
+    ? Math.round((deployedSquads.length / activeSquads.length) * 100)
+    : 0;
 
   let currentCoverage = coverageIndex;
   let projectedCoverage = coverageIndex;
@@ -158,7 +163,7 @@ export default function PatrolsPage() {
               <div style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.02))", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "12px", padding: "20px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}>
                 <div style={{ fontSize: "0.7rem", color: "var(--color-success)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.8 }}>Deployment Score</div>
                 <div style={{ fontSize: "2.5rem", fontWeight: 800, color: "var(--color-success)", margin: "4px 0", textShadow: "0 2px 10px rgba(16, 185, 129, 0.2)" }}>{selectedBriefing.score}</div>
-                <div style={{ fontSize: "0.75rem", color: "#e2e8f0", fontWeight: 500, background: "rgba(0,0,0,0.2)", padding: "4px 10px", borderRadius: "12px" }}>Top {selectedBriefing.percentileRank}% Citywide</div>
+                <div style={{ fontSize: "0.75rem", color: "#e2e8f0", fontWeight: 500, background: "rgba(0,0,0,0.2)", padding: "4px 10px", borderRadius: "12px" }}>{getSeverityDescription(selectedBriefing.hotspotTier, selectedBriefing.tdpiPercentile)}</div>
               </div>
               <div style={{ background: "linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01))", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "12px", padding: "20px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}>
                 <div style={{ fontSize: "0.7rem", color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Priority Rank</div>

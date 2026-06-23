@@ -8,7 +8,10 @@ import {
   usePatrolUnits, 
   useDashboardSummary, 
   usePatrolSummary, 
-  usePatrolRecommendations 
+  usePatrolRecommendations,
+  useHourlyTrends,
+  useDigitalTwinState,
+  TrendPoint
 } from "@/hooks/useIntelligence";
 import { TIMELINE_HOURS, H3GridCell, DashboardSummary } from "@/services/intelligence.service";
 import Link from "next/link";
@@ -88,24 +91,15 @@ function InfoTooltip({ definition, importance, source }: { definition: string, i
   );
 }
 
-// Chart trend data types
-interface TrendPoint {
-  label: string;
-  tdpi: number;
-  violations: number;
-  visibilityGap: number;
-  coverage: number;
-  hotspots: number;
-}
-
 interface ChartProps {
   trends: TrendPoint[];
   metric: "tdpi" | "violations" | "visibilityGap" | "coverage";
   color?: string;
   labelsX?: string[];
+  activeHour?: string;
 }
 
-const AnalyticsLineChart = React.memo(function AnalyticsLineChart({ trends, metric, color = "#3b82f6", labelsX = [] }: ChartProps) {
+const AnalyticsLineChart = React.memo(function AnalyticsLineChart({ trends, metric, color = "#3b82f6", labelsX = [], activeHour }: ChartProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   
   const width = 500;
@@ -159,20 +153,20 @@ const AnalyticsLineChart = React.memo(function AnalyticsLineChart({ trends, metr
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>Avg TDPI:</span>
+              <span>Average City TDPI:</span>
               <strong style={{ color: "var(--color-warning)" }}>{trends[hoveredIndex].tdpi}%</strong>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>Avg Visibility Gap:</span>
+              <span>Average Visibility Gap:</span>
               <strong style={{ color: "var(--color-critical)" }}>{trends[hoveredIndex].visibilityGap}%</strong>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>Forecast Demand:</span>
-              <strong style={{ color: "var(--color-info)" }}>{trends[hoveredIndex].violations.toFixed(2)} cases/cell</strong>
+              <span>Average Predicted Violations:</span>
+              <strong style={{ color: "var(--color-info)" }}>{trends[hoveredIndex].violations.toFixed(1)}</strong>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span>Active Hotspots:</span>
-              <strong style={{ color: "var(--color-brand)" }}>{trends[hoveredIndex].hotspots} zones</strong>
+              <strong style={{ color: "var(--color-brand)" }}>{trends[hoveredIndex].hotspots} Cells</strong>
             </div>
           </div>
         </div>
@@ -227,18 +221,20 @@ const AnalyticsLineChart = React.memo(function AnalyticsLineChart({ trends, metr
         {points.map((pt, idx) => {
           const [cx, cy] = pt.split(",").map(Number);
           const isHovered = hoveredIndex === idx;
+          const isActive = trends[idx].label === activeHour;
 
           return (
             <g key={idx}>
-              {/* Vertical line on hover */}
-              {isHovered && (
+              {/* Vertical line on hover or active */}
+              {(isHovered || isActive) && (
                 <line
                   x1={cx}
                   y1={paddingTop}
                   x2={cx}
                   y2={paddingTop + chartHeight}
-                  stroke="rgba(255,255,255,0.15)"
+                  stroke={isActive ? "rgba(255, 165, 0, 0.4)" : "rgba(255,255,255,0.15)"}
                   strokeDasharray="2,2"
+                  style={isActive ? { filter: "drop-shadow(0 0 2px var(--color-brand))" } : {}}
                 />
               )}
 
@@ -246,11 +242,14 @@ const AnalyticsLineChart = React.memo(function AnalyticsLineChart({ trends, metr
               <circle
                 cx={cx}
                 cy={cy}
-                r={isHovered ? 5.5 : 3.5}
-                fill={isHovered ? "var(--color-brand)" : color}
+                r={isHovered ? 5.5 : isActive ? 5.0 : 3.5}
+                fill={isHovered || isActive ? "var(--color-brand)" : color}
                 stroke="var(--color-bg-base)"
-                strokeWidth={isHovered ? 2 : 1.5}
-                style={{ transition: "r 0.1s ease, fill 0.1s ease" }}
+                strokeWidth={isHovered || isActive ? 2 : 1.5}
+                style={{ 
+                  transition: "r 0.1s ease, fill 0.1s ease",
+                  filter: isActive ? "drop-shadow(0 0 6px var(--color-brand))" : "none"
+                }}
               />
 
               {/* Wide Invisible Hover Target Area */}
@@ -282,46 +281,34 @@ const AnalyticsLineChart = React.memo(function AnalyticsLineChart({ trends, metr
 });
 
 export default function DashboardPage() {
-  const [selectedHour, setSelectedHour] = useState<string>("12:00");
+  const { timelineHour, setTimelineHour } = useDigitalTwinState();
   const [activeTab, setActiveTab] = useState<"tdpi" | "violations" | "visibilityGap" | "coverage">("tdpi");
   
-  const { data: cells = [], isLoading: loadingCells, isError, error, refetch } = useMapIntelligence(selectedHour);
-  const { data: summary, isLoading: loadingSummary } = useDashboardSummary(selectedHour);
+  const { data: cells = [], isLoading: loadingCells, isError, error, refetch } = useMapIntelligence(timelineHour);
+  const { data: summary, isLoading: loadingSummary } = useDashboardSummary(timelineHour);
   const { data: patrolSummary, isLoading: loadingPatrolSummary } = usePatrolSummary();
   const { data: patrolRecommendations = [] } = usePatrolRecommendations();
+  const { data: hourlyTrends = [], isLoading: loadingTrends } = useHourlyTrends();
 
-  // Baseline forecast weeks metadata from Parquet data source
-  const forecastWeeks = [
-    { label: "Week of 11 Mar", forecast: 12.10 },
-    { label: "Week of 18 Mar", forecast: 11.77 },
-    { label: "Week of 25 Mar", forecast: 13.36 },
-    { label: "Week of 01 Apr", forecast: 24.29 }
-  ];
-  const averageForecast = 15.38;
+  // Find the trend point for the globally selected operational hour
+  const currentPoint = hourlyTrends.find(p => p.label === timelineHour) || {
+    label: timelineHour,
+    tdpi: summary?.cityTdpi || 54,
+    violations: 0,
+    visibilityGap: summary?.averageVisibilityGap || 31,
+    coverage: 0,
+    hotspots: summary?.activeHotspots || 5
+  };
 
-  // Deriving 100% authentic trend series
-  const cityTdpi = summary?.cityTdpi || 54;
-  const averageVisibilityGap = summary?.averageVisibilityGap || 31;
-  const activeHotspots = summary?.activeHotspots || 5;
+  const cityTdpi = currentPoint.tdpi;
+  const averageVisibilityGap = currentPoint.visibilityGap;
+  const activeHotspots = currentPoint.hotspots;
 
-  const weeklyTrends: TrendPoint[] = forecastWeeks.map(w => {
-    const ratio = w.forecast / averageForecast;
-    const tdpi = Math.min(100, Math.max(5, Math.round(cityTdpi * ratio)));
-    const violations = w.forecast;
-    const visibilityGap = Math.round(averageVisibilityGap);
-    const coverage = Math.max(5, Math.min(95, Math.round(100 - (tdpi * 0.8))));
-    const hotspots = Math.round(activeHotspots * ratio);
-    return {
-      label: w.label,
-      tdpi,
-      violations,
-      visibilityGap,
-      coverage,
-      hotspots
-    };
+  // Render even hours on the X-axis, leave odd hours blank to prevent overlap
+  const chartLabels = hourlyTrends.map(t => {
+    const hourNum = parseInt(t.label.split(":")[0], 10);
+    return hourNum % 2 === 0 ? t.label : "";
   });
-
-  const chartLabels = weeklyTrends.map(t => t.label);
 
   const getOperationalStatus = (tdpiVal: number) => {
     if (tdpiVal > 70) return { text: "Critical Status", variant: "critical" as const, color: "#f87171" };
@@ -343,7 +330,7 @@ export default function DashboardPage() {
       <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "0.85rem", lineHeight: "1.6", color: "var(--color-text-secondary)" }}>
         <p>
           The city-wide grid operations show a consolidated status of <strong style={{ color: currentStatus.color }}>{currentStatus.text}</strong>, 
-          driven by an average Traffic Density Pressure Index (TDPI) of <strong>{cityTdpi}%</strong>.
+          driven by an average Traffic Density Pressure Index (TDPI) of <strong>{cityTdpi}%</strong> at <strong>{timelineHour}</strong>.
           Operational sensors have logged <strong>{activeHotspots}</strong> Active Critical Hotspots requiring enforcement dispatch.
         </p>
         <p>
@@ -359,7 +346,7 @@ export default function DashboardPage() {
     );
   };
 
-  const isLoading = loadingCells || loadingSummary || loadingPatrolSummary;
+  const isLoading = loadingCells || loadingSummary || loadingPatrolSummary || loadingTrends;
 
   return (
     <PageWrapper
@@ -475,16 +462,16 @@ export default function DashboardPage() {
                   {/* Forecast Hour Selector */}
                   <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)", borderRadius: "8px", padding: "10px 14px", display: "flex", flexDirection: "column", gap: "4px" }}>
                     <div style={{ fontSize: "10px", color: "var(--color-text-muted)", display: "flex", alignItems: "center", gap: "4px", marginBottom: "2px" }}>
-                      <span>Forecast Hour</span>
+                      <span>Operational Hour</span>
                       <InfoTooltip 
-                        definition="The current temporal window selected for predictive validation." 
-                        importance="Enables operators to query predicted risk profiles for different times of day." 
+                        definition="The current operational window selected for temporal validation." 
+                        importance="Enables operators to query operational profiles for different times of day." 
                         source="GET /api/v1/temporal?hour=... (scales spatial metrics based on peak profiles)"
                       />
                     </div>
                     <select
-                      value={selectedHour}
-                      onChange={(e) => setSelectedHour(e.target.value)}
+                      value={timelineHour}
+                      onChange={(e) => setTimelineHour(e.target.value)}
                       style={{
                         background: "rgba(255, 255, 255, 0.05)",
                         border: "1px solid rgba(255, 255, 255, 0.12)",
@@ -530,14 +517,14 @@ export default function DashboardPage() {
             {/* Left Column: Trends, Summary, Grid list */}
             <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
               
-              {/* Section 2: City-wide Operational Trends */}
+              {/* Section 2: City Operational Timeline */}
               <Card variant="glass">
                 <CardHeader
                   title={
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <TrendingUp size={16} style={{ color: "var(--color-brand)" }} />
-                        <span>City-wide Operational Trends</span>
+                        <span>City Operational Timeline</span>
                       </div>
                       
                       {/* Metric Tabs */}
@@ -556,7 +543,7 @@ export default function DashboardPage() {
                           onClick={() => setActiveTab("violations")} 
                           style={{ height: "26px", fontSize: "10px" }}
                         >
-                          Forecasted Violations
+                          Predicted Violations
                         </Button>
                         <Button 
                           variant={activeTab === "visibilityGap" ? "default" : "secondary"} 
@@ -577,7 +564,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   }
-                  subtitle="This chart summarizes city-wide operational trends over the selected forecast periods."
+                  subtitle="Average city operational intelligence across the selected day, powered by the Temporal Intelligence engine."
                 />
                 <CardBody style={{ marginTop: "16px", padding: "10px 20px 20px 20px" }}>
                   {isLoading ? (
@@ -586,17 +573,17 @@ export default function DashboardPage() {
                     <div>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px", alignItems: "center" }}>
                         <span style={{ fontSize: "11px", color: "var(--color-text-secondary)" }}>
-                          {activeTab === "tdpi" && "Derived City-wide Congestion Load Trend"}
-                          {activeTab === "violations" && "CatBoost Validated Weekly Forecasted Violations (Average per cell)"}
-                          {activeTab === "visibilityGap" && "City-wide Average Unmonitored Visibility Gap Baseline"}
-                          {activeTab === "coverage" && "Derived Enforcement Patrol Coverage Capability"}
+                          {activeTab === "tdpi" && "Average City TDPI throughout the operational day"}
+                          {activeTab === "violations" && "CatBoost Validated Hourly Predicted Violations"}
+                          {activeTab === "visibilityGap" && "Hourly Operational Visibility Gap Profile"}
+                          {activeTab === "coverage" && "Hourly Enforcement Patrol Coverage Timeline"}
                         </span>
                         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                           <Badge variant={activeTab === "tdpi" ? "warning" : activeTab === "visibilityGap" ? "critical" : "success"}>
-                            {activeTab === "tdpi" && `Current Value: ${cityTdpi}%`}
-                            {activeTab === "violations" && `Baseline Avg: ${averageForecast} violations`}
-                            {activeTab === "visibilityGap" && `Current Gap: ${Math.round(averageVisibilityGap)}%`}
-                            {activeTab === "coverage" && `Operational Coverage: ${Math.max(5, Math.min(95, Math.round(100 - (cityTdpi * 0.8))))}%`}
+                            {activeTab === "tdpi" && `Current Time: ${timelineHour} | Current City TDPI: ${currentPoint.tdpi}%`}
+                            {activeTab === "violations" && `Current Time: ${timelineHour} | Hourly Forecast: ${currentPoint.violations.toFixed(1)} cases`}
+                            {activeTab === "visibilityGap" && `Current Time: ${timelineHour} | Current Gap: ${currentPoint.visibilityGap}%`}
+                            {activeTab === "coverage" && `Current Time: ${timelineHour} | Coverage: N/A`}
                           </Badge>
                           <Link href="/map">
                             <Button size="sm" variant="secondary" style={{ fontSize: "9px", height: "20px", padding: "0 6px" }}>
@@ -605,16 +592,33 @@ export default function DashboardPage() {
                           </Link>
                         </div>
                       </div>
-                      <AnalyticsLineChart 
-                        trends={weeklyTrends} 
-                        metric={activeTab} 
-                        color={
-                          activeTab === "tdpi" ? "var(--color-warning)" : 
-                          activeTab === "visibilityGap" ? "var(--color-critical)" : 
-                          "var(--color-success)"
-                        } 
-                        labelsX={chartLabels} 
-                      />
+                      {activeTab === "coverage" ? (
+                        <div style={{ 
+                          height: "180px", 
+                          display: "flex", 
+                          alignItems: "center", 
+                          justifyContent: "center", 
+                          border: "1px dashed rgba(255, 255, 255, 0.1)", 
+                          borderRadius: "8px", 
+                          color: "var(--color-text-muted)", 
+                          fontSize: "11px",
+                          backgroundColor: "rgba(255,255,255,0.01)"
+                        }}>
+                          Hourly patrol coverage is not available from the current Temporal Intelligence dataset.
+                        </div>
+                      ) : (
+                        <AnalyticsLineChart 
+                          trends={hourlyTrends} 
+                          metric={activeTab} 
+                          color={
+                            activeTab === "tdpi" ? "var(--color-warning)" : 
+                            activeTab === "visibilityGap" ? "var(--color-critical)" : 
+                            "var(--color-success)"
+                          } 
+                          labelsX={chartLabels} 
+                          activeHour={timelineHour}
+                        />
+                      )}
                     </div>
                   )}
                 </CardBody>

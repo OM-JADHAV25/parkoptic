@@ -23,6 +23,8 @@ import {
   Activity
 } from "lucide-react";
 import { Card, CardHeader, CardBody, Button, Badge } from "@/components/ui";
+import { getSeverityCSS, getSeverityGradient, getSeverityLabel, getSeverityDescription, getSeverityIcon } from "@/utils/severity";
+import { formatTDPIOutcome, formatVisibilityOutcome, formatPatrolOutcome, formatCapacityOutcome, generateExecutiveSummary, OutcomeResult } from "@/utils/operationalOutcome";
 import { H3GridCell, PatrolUnit, DashboardSummary, SimulationResult } from "@/services/intelligence.service";
 import { Maximize, Minimize } from "lucide-react";
 import { OperationalMode, MapLayer, DeploymentFeedback } from "@/hooks/useIntelligence";
@@ -82,10 +84,47 @@ function HudMetricForecast({ label, value, unit = "", tooltip = "" }: { label: s
 function ProjectedOperationalImpact({ delta, baseline, simulated, patrolRecommendations = [], gridCells = [] }: { delta: any, baseline: any, simulated: any, patrolRecommendations?: any[], gridCells?: H3GridCell[] }) {
   const isOptimal = delta.patrolDelta > 0 && Math.abs(delta.tdpiDelta) < 0.01 && Math.abs(delta.visibilityDelta) < 0.01;
 
-  const baseCapacity = (baseline.recommended_patrol_units ?? 0) * 12;
-  const simCapacity = (simulated.recommended_patrol_units ?? 0) * 12;
+  const cell = gridCells.find((c: any) => c.h3Index === simulated.h3_index || c.h3Index === baseline.h3_index);
+
+  // Source of truth: compare raw baseline (Current State) against simulated (Projected State)
+  const currentTdpi = baseline.tdpi_score ?? cell?.baselineTdpi ?? cell?.tdpi ?? 0;
+  const projectedTdpi = simulated.projected_tdpi ?? simulated.tdpi_score ?? 0;
+
+  const currentVis = baseline.visibility_gap_index ?? baseline.visibility_gap?.visibility_gap_index ?? cell?.visibilityGap ?? 0;
+  const projectedVis = simulated.visibility_gap_index ?? simulated.visibility_gap?.visibility_gap_index ?? 0;
+
+  const currentPatrol = baseline.recommended_patrol_units ?? 0;
+  const projectedPatrol = simulated.recommended_patrol_units ?? 0;
+
+  const baseCapacity = currentPatrol * 12;
+  const simCapacity = projectedPatrol * 12;
+  const demand = Math.round(baseline.predicted_violations ?? 0);
   const baseUtilization = baseCapacity > 0 ? Math.round(((baseline.estimated_weekly_violations_addressed ?? 0) / baseCapacity) * 100) : 0;
   const simUtilization = simCapacity > 0 ? Math.round(((simulated.estimated_weekly_violations_addressed ?? 0) / simCapacity) * 100) : 0;
+
+  const tdpiOutcome = formatTDPIOutcome(currentTdpi, projectedTdpi);
+  const visOutcome = formatVisibilityOutcome(currentVis, projectedVis);
+  const patrolOutcome = formatPatrolOutcome(currentPatrol, projectedPatrol);
+  const capacityOutcome = formatCapacityOutcome(baseCapacity, simCapacity, demand, baseUtilization, simUtilization);
+
+  const formatTdpiVal = (v: number) => (Number.isInteger(v) ? v.toString() : v.toFixed(2));
+  const summaryText = generateExecutiveSummary(projectedPatrol, currentTdpi, projectedTdpi);
+
+  // Surface backend recommendation justification
+  const cellRec = patrolRecommendations.find((r: any) => r.h3_index === simulated.h3_index || r.h3_index === baseline.h3_index);
+  const rawReason = cellRec?.recommendation_reason || cellRec?.reason || "";
+  const parsedBullets = rawReason
+    ? rawReason.replace(/\.$/, "").split(",").map((r: string) => r.trim()).filter(Boolean).map((r: string) => r.charAt(0).toUpperCase() + r.slice(1))
+    : [];
+
+  const fallbackBullets: string[] = [];
+  if (currentTdpi >= 70) fallbackBullets.push("High historical violation density");
+  else if (currentTdpi >= 40) fallbackBullets.push("Moderate violation density");
+  if (currentVis >= 20) fallbackBullets.push("Low enforcement coverage");
+  if (cell && cell.forecastConfidence >= 0.8) fallbackBullets.push("High forecast confidence");
+  if (fallbackBullets.length === 0) fallbackBullets.push("Routine monitoring sector");
+
+  const finalBullets = parsedBullets.length > 0 ? parsedBullets : fallbackBullets;
 
   const alternative = isOptimal ? patrolRecommendations
     .filter((r: any) => r.h3_index !== simulated.h3_index)
@@ -93,34 +132,142 @@ function ProjectedOperationalImpact({ delta, baseline, simulated, patrolRecommen
 
   const alternativeCell = alternative ? gridCells.find((c: any) => c.h3Index === alternative.h3_index) : null;
 
+  const renderMetricOutcome = (outcome: OutcomeResult, extraContext?: React.ReactNode) => {
+    const isNegligible = outcome.direction === "no-change";
+    return (
+      <div style={{
+        textAlign: "center",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: "rgba(255, 255, 255, 0.02)",
+        padding: "10px",
+        borderRadius: "8px",
+        border: "1px solid rgba(255, 255, 255, 0.04)"
+      }}>
+        <div style={{ width: "100%" }}>
+          <div style={{ fontSize: "10px", color: "var(--color-text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+            {outcome.label}
+          </div>
+          
+          {/* Current State */}
+          <div style={{ marginTop: "6px" }}>
+            <div style={{ fontSize: "8px", color: "var(--color-text-muted)" }}>Current State</div>
+            <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--color-text-primary)" }}>
+              {outcome.beforeVal}
+            </div>
+          </div>
+
+          {/* Transition */}
+          <div style={{ fontSize: "11px", color: "var(--color-text-muted)", margin: "2px 0", fontWeight: 800 }}>
+            {outcome.transitionArrow}
+          </div>
+
+          {/* Projected State */}
+          <div>
+            <div style={{ fontSize: "8px", color: "var(--color-text-muted)" }}>Projected State</div>
+            <div style={{ fontSize: "16px", fontWeight: 800, color: "#22d3ee" }}>
+              {outcome.afterVal}
+            </div>
+          </div>
+
+          {/* Transition to change */}
+          <div style={{ fontSize: "10px", color: "var(--color-text-muted)", margin: "2px 0", fontWeight: 800, opacity: 0.5 }}>
+            ↓
+          </div>
+        </div>
+
+        {/* Operational Change */}
+        <div style={{ width: "100%" }}>
+          <div style={{ fontSize: "8px", color: "var(--color-text-muted)" }}>Operational Change</div>
+          <div style={{
+            fontSize: isNegligible ? "9px" : "11px",
+            fontWeight: 700,
+            color: outcome.color,
+            marginTop: "1px",
+            lineHeight: 1.2
+          }}>
+            {outcome.changeText}
+          </div>
+          {outcome.subText && (
+            <div style={{ fontSize: "9px", color: outcome.color, opacity: 0.8, fontWeight: 600 }}>
+              {outcome.subText}
+            </div>
+          )}
+          
+          {extraContext}
+
+          {outcome.interpretation && (
+            <div style={{
+              fontSize: "9px",
+              color: outcome.color,
+              marginTop: "6px",
+              borderTop: "1px solid rgba(255,255,255,0.06)",
+              paddingTop: "4px",
+              lineHeight: 1.3,
+              fontWeight: 500
+            }}>
+              {outcome.interpretation}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "12px", padding: "12px", borderRadius: "10px", backgroundColor: "rgba(34, 211, 238, 0.04)", border: "1px solid rgba(34, 211, 238, 0.2)", marginTop: "12px", animation: "fadeSlideIn 0.3s ease-out" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "6px", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "8px", marginBottom: "4px" }}>
         <Activity size={14} style={{ color: "#22d3ee" }} />
-        <span style={{ fontSize: "11px", fontWeight: 800, color: "#22d3ee", textTransform: "uppercase", letterSpacing: "0.05em" }}>Projected Operational Impact</span>
+        <span style={{ fontSize: "11px", fontWeight: 800, color: "#22d3ee", textTransform: "uppercase", letterSpacing: "0.05em" }}>Expected Operational Outcome</span>
+      </div>
+
+      {/* Executive Briefing Summary */}
+      <div style={{
+        padding: "10px",
+        borderRadius: "8px",
+        backgroundColor: "rgba(34, 211, 238, 0.02)",
+        border: "1px solid rgba(34, 211, 238, 0.08)",
+        fontSize: "11px",
+        lineHeight: "1.5",
+        color: "var(--color-text-secondary)"
+      }}>
+        <div style={{ fontSize: "9px", fontWeight: 700, color: "#22d3ee", textTransform: "uppercase", marginBottom: "4px", letterSpacing: "0.05em" }}>Expected Result</div>
+        <div dangerouslySetInnerHTML={{
+          __html: `Deploying <strong style="color: #22d3ee;">${projectedPatrol} patrol unit${projectedPatrol !== 1 ? "s" : ""}</strong> is expected to reduce operational pressure from <strong style="color: #cbd5e1;">${formatTdpiVal(currentTdpi)}%</strong> to <strong style="color: #22d3ee;">${formatTdpiVal(projectedTdpi)}%</strong> while maintaining adequate visibility coverage.`
+        }} />
       </div>
       
-      {/* Operational Metrics */}
+      {/* Operational Metrics Grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "10px" }}>
-        <HudMetricComparative label="TDPI" before={baseline.projected_tdpi ?? baseline.tdpi_score} after={simulated.projected_tdpi ?? simulated.tdpi_score} />
-        <HudMetricComparative label="Visibility Gap" before={baseline.visibility_gap_index ?? baseline.visibility_gap?.visibility_gap_index ?? 0} after={simulated.visibility_gap_index ?? simulated.visibility_gap?.visibility_gap_index ?? 0} />
-        <HudMetricComparative label="Patrol Allocation" before={baseline.recommended_patrol_units ?? 0} after={simulated.recommended_patrol_units ?? 0} unit="" lowerIsBetter={false} />
+        {renderMetricOutcome(tdpiOutcome)}
+        {renderMetricOutcome(visOutcome)}
+        {renderMetricOutcome(patrolOutcome)}
         
-        {/* Customized Capacity Utilization with tooltip */}
-        <div style={{ textAlign: "center" }} title="Represents how efficiently deployed patrol capacity is being used relative to forecasted operational demand. Decreases indicate excess capacity.">
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
-            <div style={{ fontSize: "10px", color: "var(--color-text-secondary)", fontWeight: 500 }}>Capacity Utilization</div>
-            <HelpCircle size={10} style={{ color: "var(--color-text-muted)" }} />
+        {/* Capacity Utilization outcome card */}
+        {renderMetricOutcome(capacityOutcome, (
+          <div style={{ fontSize: "8px", color: "var(--color-text-muted)", marginTop: "4px", display: "flex", flexDirection: "column", gap: "2px", borderTop: "1px solid rgba(255,255,255,0.04)", paddingTop: "4px" }}>
+            <div>Capacity: {baseCapacity} → {simCapacity} cases/wk</div>
+            <div>Demand: {demand} cases/wk</div>
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: "4px", marginTop: "2px" }}>
-            <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--color-text-muted)", textDecoration: "line-through", opacity: 0.6 }}>{baseUtilization}%</span>
-            <ArrowDown size={10} style={{ color: "var(--color-info)", transform: baseUtilization > simUtilization ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.3s" }} />
-            <span style={{ fontSize: "16px", fontWeight: 800, color: "var(--color-info)" }}>{simUtilization}%</span>
-          </div>
-          <div style={{ fontSize: "8px", color: "var(--color-text-muted)", marginTop: "2px" }}>
-            {simCapacity} units capacity vs {Math.round(simulated.predicted_violations ?? 0)} demand
-          </div>
-        </div>
+        ))}
+      </div>
+
+      {/* Recommendation Reasoning Justification */}
+      <div style={{
+        padding: "10px",
+        borderRadius: "8px",
+        backgroundColor: "rgba(255, 255, 255, 0.02)",
+        border: "1px solid rgba(255, 255, 255, 0.04)",
+        marginTop: "2px"
+      }}>
+        <div style={{ fontSize: "9px", fontWeight: 700, color: "var(--color-text-secondary)", textTransform: "uppercase", marginBottom: "6px", letterSpacing: "0.05em" }}>Why this deployment?</div>
+        <ul style={{ fontSize: "10px", color: "var(--color-text-muted)", display: "flex", flexDirection: "column", gap: "4px", paddingLeft: "12px", margin: 0 }}>
+          {finalBullets.map((bullet: string, idx: number) => (
+            <li key={idx} style={{ listStyleType: "disc" }}>{bullet}</li>
+          ))}
+        </ul>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: "6px", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "8px", marginTop: "4px", marginBottom: "4px" }}>
@@ -741,17 +888,42 @@ export const RightIntelligencePanel = React.memo(function RightIntelligencePanel
 
           {/* Selected Zone Summary */}
           {selectedCell && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-              <div style={{ backgroundColor: "rgba(255,255,255,0.02)", padding: "10px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.04)" }}>
-                <div style={{ fontSize: "9px", color: "var(--color-text-secondary)" }}>TDPI Congestion</div>
-                <div style={{ fontSize: "16px", fontWeight: 800, color: selectedCell.tdpi > 70 ? "var(--color-critical)" : "var(--color-text-primary)", marginTop: "2px" }}>
-                  {selectedCell.tdpi}%
-                </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {/* Premium Operational Severity Card */}
+              <div style={{ 
+                display: "flex", 
+                alignItems: "center", 
+                gap: "8px", 
+                padding: "8px 12px", 
+                borderRadius: "8px", 
+                background: getSeverityGradient(selectedCell.hotspotTier, selectedCell.tdpiPercentile),
+                border: `1px solid ${getSeverityCSS(selectedCell.hotspotTier, selectedCell.tdpiPercentile)}`,
+                marginTop: "4px"
+              }}>
+                {React.createElement(getSeverityIcon(selectedCell.hotspotTier), { 
+                  size: 14, 
+                  style: { color: getSeverityCSS(selectedCell.hotspotTier, selectedCell.tdpiPercentile) } 
+                })}
+                <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--color-text-primary)" }}>
+                  {getSeverityLabel(selectedCell.hotspotTier)}
+                </span>
+                <span style={{ fontSize: "10px", color: "var(--color-text-muted)", marginLeft: "auto" }}>
+                  {getSeverityDescription(selectedCell.hotspotTier, selectedCell.tdpiPercentile)}
+                </span>
               </div>
-              <div style={{ backgroundColor: "rgba(255,255,255,0.02)", padding: "10px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.04)" }}>
-                <div style={{ fontSize: "9px", color: "var(--color-text-secondary)" }}>Visibility Gap</div>
-                <div style={{ fontSize: "16px", fontWeight: 800, color: selectedCell.visibilityGap > 70 ? "var(--color-critical)" : "var(--color-text-primary)", marginTop: "2px" }}>
-                  {selectedCell.visibilityGap}%
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                <div style={{ backgroundColor: "rgba(255,255,255,0.02)", padding: "10px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div style={{ fontSize: "9px", color: "var(--color-text-secondary)" }}>TDPI Congestion</div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, color: getSeverityCSS(selectedCell.hotspotTier, selectedCell.tdpiPercentile), marginTop: "2px" }}>
+                    {selectedCell.tdpi}%
+                  </div>
+                </div>
+                <div style={{ backgroundColor: "rgba(255,255,255,0.02)", padding: "10px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div style={{ fontSize: "9px", color: "var(--color-text-secondary)" }}>Visibility Gap</div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, color: selectedCell.visibilityGap !== undefined && selectedCell.visibilityGap > 70 ? "var(--color-critical)" : "var(--color-text-primary)", marginTop: "2px" }}>
+                    {selectedCell.visibilityGap !== undefined ? `${selectedCell.visibilityGap}%` : "N/A"}
+                  </div>
                 </div>
               </div>
             </div>
@@ -865,18 +1037,41 @@ export const RightIntelligencePanel = React.memo(function RightIntelligencePanel
         {/* Selected Zone Summary */}
         {selectedCell ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {/* Premium Operational Severity Card */}
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: "8px", 
+              padding: "8px 12px", 
+              borderRadius: "8px", 
+              background: getSeverityGradient(selectedCell.hotspotTier, selectedCell.tdpiPercentile),
+              border: `1px solid ${getSeverityCSS(selectedCell.hotspotTier, selectedCell.tdpiPercentile)}`,
+              marginTop: "4px"
+            }}>
+              {React.createElement(getSeverityIcon(selectedCell.hotspotTier), { 
+                size: 14, 
+                style: { color: getSeverityCSS(selectedCell.hotspotTier, selectedCell.tdpiPercentile) } 
+              })}
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--color-text-primary)" }}>
+                {getSeverityLabel(selectedCell.hotspotTier)}
+              </span>
+              <span style={{ fontSize: "10px", color: "var(--color-text-muted)", marginLeft: "auto" }}>
+                {getSeverityDescription(selectedCell.hotspotTier, selectedCell.tdpiPercentile)}
+              </span>
+            </div>
+
             {/* KPI grid for selected zone */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
               <div style={{ backgroundColor: "rgba(255,255,255,0.02)", padding: "10px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.04)" }}>
                 <div style={{ fontSize: "9px", color: "var(--color-text-secondary)" }}>TDPI Congestion</div>
-                <div style={{ fontSize: "16px", fontWeight: 800, color: selectedCell.tdpi > 70 ? "var(--color-critical)" : "var(--color-text-primary)", marginTop: "2px" }}>
-                  {selectedCell.tdpi}%
+                <div style={{ fontSize: "16px", fontWeight: 800, color: getSeverityCSS(selectedCell.hotspotTier, selectedCell.tdpiPercentile), marginTop: "2px" }}>
+                  {selectedCell.baselineTdpi ?? selectedCell.tdpi}%
                 </div>
               </div>
               <div style={{ backgroundColor: "rgba(255,255,255,0.02)", padding: "10px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.04)" }}>
                 <div style={{ fontSize: "9px", color: "var(--color-text-secondary)" }}>Visibility Gap</div>
-                <div style={{ fontSize: "16px", fontWeight: 800, color: selectedCell.visibilityGap > 70 ? "var(--color-critical)" : "var(--color-text-primary)", marginTop: "2px" }}>
-                  {selectedCell.visibilityGap}%
+                <div style={{ fontSize: "16px", fontWeight: 800, color: selectedCell.visibilityGap !== undefined && selectedCell.visibilityGap > 70 ? "var(--color-critical)" : "var(--color-text-primary)", marginTop: "2px" }}>
+                  {selectedCell.visibilityGap !== undefined ? `${selectedCell.visibilityGap}%` : "N/A"}
                 </div>
               </div>
             </div>
@@ -884,7 +1079,7 @@ export const RightIntelligencePanel = React.memo(function RightIntelligencePanel
             {/* Metric Bars */}
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "4px" }}>
               <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--color-text-primary)", marginBottom: "4px" }}>PIPELINE INTELLIGENCE:</div>
-              <MetricBar label="Hourly Operational Intensity" value={selectedCell.predictedRisk} color={selectedCell.predictedRisk > 70 ? "var(--color-critical)" : "var(--color-brand)"} tooltip="Calculated by weighting the baseline CatBoost prediction against historical hourly collection rates." />
+              <MetricBar label="Hourly Operational Intensity" value={selectedCell.predictedRisk} color={getSeverityCSS(selectedCell.hotspotTier, selectedCell.tdpiPercentile)} tooltip="Calculated by weighting the baseline CatBoost prediction against historical hourly collection rates." />
               <MetricBar label="Historical Violations" value={selectedCell.historicalViolations} max={200} unit=" cases" color="var(--color-warning)" />
               <MetricBar label="Forecast Confidence" value={Math.round(selectedCell.forecastConfidence * 100)} color="var(--color-success)" />
               <MetricBar label="AI Deployment Score" value={selectedCell.deploymentScore} color="#a855f7" />

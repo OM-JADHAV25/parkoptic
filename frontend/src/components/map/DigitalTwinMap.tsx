@@ -7,6 +7,7 @@ import DeckGL from "@deck.gl/react";
 import { PolygonLayer, ScatterplotLayer, LineLayer } from "@deck.gl/layers";
 import { H3GridCell, PatrolUnit } from "@/services/intelligence.service";
 import { OperationalMode, MapLayer } from "@/hooks/useIntelligence";
+import { getSeverityRGB } from "@/utils/severity";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 interface DigitalTwinMapProps {
@@ -99,10 +100,13 @@ const OPACITY = {
  */
 function getSeverity(cell: H3GridCell, mode: OperationalMode, activeLayer: MapLayer): number {
   if (mode === "predict") {
-    return Math.min(1, Math.max(0, cell.predictedRisk / 100));
+    return Math.min(1, Math.max(0, (cell.forecastedDemand ?? 0) / 100));
   }
   if (activeLayer === "visibility") {
-    return Math.min(1, Math.max(0, cell.visibilityGap / 100));
+    return Math.min(1, Math.max(0, (cell.visibilityGap ?? 0) / 100));
+  }
+  if (mode === "observe" || mode === "plan") {
+    return Math.min(1, Math.max(0, (cell.baselineTdpi ?? cell.tdpi) / 100));
   }
   // Default: TDPI
   return Math.min(1, Math.max(0, cell.tdpi / 100));
@@ -221,11 +225,8 @@ const DigitalTwinMap = React.memo(function DigitalTwinMap({
         else if (severity > 0.4) baseColor = lerpColor(COLORS.visLow, COLORS.visModerate, (severity - 0.4) / 0.3);
         else baseColor = [...COLORS.visLow];
       } else {
-        // TDPI (default)
-        if (severity > 0.7) baseColor = [...COLORS.tdpiCritical];
-        else if (severity > 0.4) baseColor = lerpColor(COLORS.tdpiModerate, COLORS.tdpiHigh, (severity - 0.4) / 0.3);
-        else if (severity > 0.15) baseColor = [...COLORS.tdpiModerate];
-        else baseColor = [...COLORS.tdpiLow];
+        // TDPI (default) - Use shared operational severity presentation colors
+        baseColor = getSeverityRGB(cell.hotspotTier, cell.tdpiPercentile);
       }
 
       // Determine opacity — risk-proportional + selection-aware

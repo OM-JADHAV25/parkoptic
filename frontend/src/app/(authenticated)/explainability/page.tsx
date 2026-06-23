@@ -8,12 +8,13 @@ import { Eye, HelpCircle, Activity, Sparkles, ShieldAlert, Award } from "lucide-
 import Link from "next/link";
 
 // Custom SVG Circular Gauge Component for premium aesthetics
-function CircularGauge({ value, label, color = "#3b82f6" }: { value: number; label: string; color?: string }) {
+function CircularGauge({ value, label, color = "#3b82f6" }: { value?: number; label: string; color?: string }) {
   const radius = 35;
   const stroke = 6;
   const normalizedRadius = radius - stroke * 2;
   const circumference = normalizedRadius * 2 * Math.PI;
-  const strokeDashoffset = circumference - (value / 100) * circumference;
+  const validValue = value !== undefined ? value : 0;
+  const strokeDashoffset = circumference - (validValue / 100) * circumference;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "10px" }}>
@@ -30,7 +31,7 @@ function CircularGauge({ value, label, color = "#3b82f6" }: { value: number; lab
           />
           {/* Main filled circle */}
           <circle
-            stroke={color}
+            stroke={value !== undefined ? color : "transparent"}
             fill="transparent"
             strokeWidth={stroke}
             strokeDasharray={circumference + " " + circumference}
@@ -41,8 +42,8 @@ function CircularGauge({ value, label, color = "#3b82f6" }: { value: number; lab
             cy={radius}
           />
         </svg>
-        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: 800, color: "#f1f5f9" }}>
-          {value}%
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: 800, color: value !== undefined ? "#f1f5f9" : "var(--color-text-secondary)" }}>
+          {value !== undefined ? `${value}%` : "N/A"}
         </div>
       </div>
       <span style={{ fontSize: "9px", color: "var(--color-text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -162,7 +163,7 @@ function ExplainabilityPageInner() {
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span>Recommended Squad Units:</span>
-                    <strong style={{ color: "var(--color-info)" }}>{info.deploymentScore > 75 ? 2 : info.deploymentScore > 40 ? 1 : 0} Squads</strong>
+                    <strong style={{ color: "var(--color-info)" }}>{info.recommendedPatrolUnits} Squads</strong>
                   </div>
                 </div>
               )}
@@ -200,7 +201,7 @@ function ExplainabilityPageInner() {
               <>
                 {/* Circular Dials row */}
                 <div style={{ display: "flex", justifyContent: "space-around", backgroundColor: "rgba(0,0,0,0.15)", padding: "16px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.03)" }}>
-                  <CircularGauge value={info.tdpi} label="TDPI Index" color="var(--color-warning)" />
+                  <CircularGauge value={info.baselineTdpi ?? info.tdpi} label="TDPI Index" color="var(--color-warning)" />
                   <CircularGauge value={info.visibilityGap} label="Visibility Gap" color="var(--color-critical)" />
                   <CircularGauge value={info.deploymentScore} label="Priority Score" color="#a855f7" />
                 </div>

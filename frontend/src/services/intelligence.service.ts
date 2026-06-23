@@ -6,7 +6,7 @@ export interface H3GridCell {
   vertices: [number, number][]; // Hexagon coordinates [lng, lat][]
   name: string;
   tdpi: number; // Current TDPI (0-100)
-  visibilityGap: number; // Current Visibility Gap (0-100)
+  visibilityGap?: number; // Current Visibility Gap (0-100)
   historicalViolations: number;
   forecastConfidence: number; // (0.0 to 1.0)
   deploymentScore: number; // Priority score (0-100)
@@ -17,6 +17,9 @@ export interface H3GridCell {
   violationsAddressed?: number;
   coverageScore?: number;
   forecastedDemand?: number;
+  recommendedPatrolUnits?: number;
+  hotspotTier?: string;
+  tdpiPercentile?: number;
 }
 
 export interface PatrolUnit {
@@ -214,9 +217,9 @@ export const BENGALURU_GRID_CELLS: H3GridCell[] = GRID_CELLS_DEFINITION.map((def
 });
 
 export const TIMELINE_HOURS = [
-  "08:00", "09:00", "10:00", "11:00", "12:00", "13:00",
-  "14:00", "15:00", "16:00", "17:00", "18:00", "19:00",
-  "20:00", "21:00", "22:00"
+  "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00",
+  "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00",
+  "22:00"
 ];
 
 // Initial mock patrol allocations

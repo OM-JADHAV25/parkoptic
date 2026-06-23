@@ -51,7 +51,7 @@ export function useCommandPaletteData(searchQuery: string) {
           type: "sector",
           category: "H3 Sectors",
           title: cell.name || `Sector ${cell.h3Index}`,
-          subtitle: `TDPI: ${cell.tdpi}%`,
+          subtitle: `TDPI: ${cell.baselineTdpi ?? cell.tdpi}%`,
           description: `Visibility Gap: ${cell.visibilityGap}%`,
           keywords: ["sector", "h3", "grid", "hexagon", cell.h3Index, cell.name],
           icon: MapPin,

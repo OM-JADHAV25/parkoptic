@@ -11,8 +11,18 @@ import {
   ActivityFeedItem, 
   CategorizedReport,
   SimulationResult,
-  ServiceHealth
+  ServiceHealth,
+  TIMELINE_HOURS
 } from "@/services/intelligence.service";
+
+export interface TrendPoint {
+  label: string;
+  tdpi: number;
+  violations: number;
+  visibilityGap: number;
+  coverage: number;
+  hotspots: number;
+}
 import { apiClient } from "@/services/apiClient";
 import { API_ENDPOINTS } from "@/config/endpoints";
 import { 
@@ -83,15 +93,39 @@ export function useMapIntelligence(hour: string, activeMode: OperationalMode = "
   const { data: patrols } = usePatrolUnits();
   const { data: simData, isLoading, isError, error, refetch } = useSimulationData(hour);
   
-  const hasOverrides = patrols?.some(p => p.assignedCell && p.status !== "off-duty");
+  const hasOverrides = useMemo(() => {
+    if (!patrols || patrols.length === 0) return false;
+    const INITIAL_ALLOCATIONS: Record<string, number> = {
+      "89618924b93ffff": 1,
+      "89618921ab7ffff": 1,
+      "89601458377ffff": 1,
+      "896189255b7ffff": 1,
+    };
+    const allocations: Record<string, number> = {};
+    patrols.forEach(p => {
+      if (p.assignedCell && p.status !== "off-duty") {
+        allocations[p.assignedCell] = (allocations[p.assignedCell] || 0) + 1;
+      }
+    });
+    return (
+      Object.keys(allocations).length !== Object.keys(INITIAL_ALLOCATIONS).length ||
+      Object.entries(INITIAL_ALLOCATIONS).some(([cell, count]) => allocations[cell] !== count)
+    );
+  }, [patrols]);
+
   const shouldSimulate = (activeMode === "plan" || activeMode === "simulate" || hasOverrides);
 
   const gridCells = useMemo(() => {
     if (!simData) return undefined;
-    // PHASE 21 UPDATE: ALWAYS return baseline grid cells. The map's color scale represents the true Current Operational State.
-    // The visual simulation layer will be handled separately via scenario overlays.
+    
+    // Return simulated metrics when a simulation is active so the map and panels 
+    // reflect the dynamically calculated TDPI and Visibility Gap metrics.
+    if (shouldSimulate && simData.simulated) {
+      return adaptHotspotsList(simData.simulated);
+    }
+    
     return adaptHotspotsList(simData.baseline);
-  }, [simData]);
+  }, [simData, shouldSimulate]);
 
   return { data: gridCells, isLoading, isError, error, refetch };
 }
@@ -200,7 +234,19 @@ export interface DeploymentFeedback {
 export function useDigitalTwinState() {
   const [activeMode, setActiveMode] = useState<OperationalMode>("observe");
   const [activeLayer, setActiveLayer] = useState<MapLayer>("tdpi");
-  const [timelineHour, setTimelineHour] = useState<string>("12:00");
+  
+  const queryClient = useQueryClient();
+  const { data: timelineHour = "12:00" } = useQuery<string>({
+    queryKey: ["globalHour"],
+    queryFn: () => "12:00",
+    initialData: "12:00",
+    staleTime: Infinity,
+  });
+
+  const setTimelineHour = useCallback((newHour: string) => {
+    queryClient.setQueryData(["globalHour"], newHour);
+  }, [queryClient]);
+
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [selectedCellIndex, setSelectedCellIndex] = useState<string | null>(null);
   const [deploymentFeedback, setDeploymentFeedback] = useState<DeploymentFeedback | null>(null);
@@ -250,6 +296,57 @@ export function useDigitalTwinState() {
     showDeploymentFeedback,
     dismissDeploymentFeedback,
   };
+}
+
+// Hook to query the hourly operational intelligence trends (Phase 41)
+export function useHourlyTrends() {
+  return useQuery<TrendPoint[], Error>({
+    queryKey: ["hourlyTrends"],
+    queryFn: async () => {
+      // Query each hour in TIMELINE_HOURS concurrently
+      const results = await Promise.all(
+        TIMELINE_HOURS.map(async (hourStr) => {
+          const h = parseInt(hourStr.split(":")[0], 10);
+          return apiClient.get<any[]>(API_ENDPOINTS.TEMPORAL(h));
+        })
+      );
+      
+      return TIMELINE_HOURS.map((hourStr, idx) => {
+        const hotspots = results[idx] || [];
+        const count = hotspots.length || 1;
+        
+        let sumTdpi = 0;
+        let sumViolations = 0;
+        let sumVis = 0;
+        
+        hotspots.forEach(item => {
+          // operational_risk is the temporally-scaled absolute TDPI score
+          sumTdpi += item.operational_risk || 0;
+          sumViolations += item.hourly_estimate || 0;
+          sumVis += item.visibility_gap_index || 0;
+        });
+        
+        const avgTdpi = Math.round(sumTdpi / count);
+        const avgViolations = sumViolations / count;
+        const avgVis = Math.round(sumVis / count);
+        
+        // Count active hotspots using the backend operational_risk field.
+        // Treated purely as a visualization threshold (operational_risk > 60), NOT as new derived intelligence.
+        const hotspotsCount = hotspots.filter((curr: any) => (curr.operational_risk || 0) > 60).length;
+        
+        return {
+          label: hourStr,
+          tdpi: avgTdpi,
+          violations: avgViolations,
+          visibilityGap: avgVis,
+          coverage: 0, // Coverage is disabled on the hourly trend per Phase 41 instructions.
+          hotspots: hotspotsCount
+        };
+      });
+    },
+    staleTime: Infinity, // Query once per user session to avoid redundant network overhead
+    gcTime: Infinity,
+  });
 }
 
 // Simulation dispatch mutation hook

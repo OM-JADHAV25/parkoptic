@@ -4,26 +4,29 @@ import React, { useState } from "react";
 import { PageWrapper } from "@/components/layout";
 import { Card, CardHeader, CardBody, Badge, Button, Skeleton } from "@/components/ui";
 import { useMapIntelligence } from "@/hooks/useIntelligence";
-import { AlertTriangle, Map, SlidersHorizontal, AlertCircle } from "lucide-react";
+import { Map, SlidersHorizontal, AlertCircle, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { getSeverityCSS, getSeverityLabel, getSeverityBadgeClass, getSeverityIcon, isSeverityMatch } from "@/utils/severity";
 
 export default function HotspotsPage() {
   const { data: cells = [], isLoading, isError, error, refetch } = useMapIntelligence("12:00");
   const [filterType, setFilterType] = useState<"all" | "critical" | "warning">("all");
   const [sortBy, setSortBy] = useState<"tdpi" | "risk" | "gap">("tdpi");
 
-  // Filter cells based on status
+  // Filter cells based on status using shared severity match
   const hotspotsList = cells.filter(c => {
-    if (filterType === "critical") return c.tdpi > 70;
-    if (filterType === "warning") return c.tdpi > 40 && c.tdpi <= 70;
-    return c.tdpi > 30; // only show active hot spots
+    if (filterType !== "all") {
+      return isSeverityMatch(c.hotspotTier, filterType);
+    }
+    const tdpiVal = c.baselineTdpi ?? c.tdpi;
+    return tdpiVal > 30; // only show active hot spots
   });
 
   // Sort
   const sortedHotspots = [...hotspotsList].sort((a, b) => {
     if (sortBy === "risk") return b.predictedRisk - a.predictedRisk;
-    if (sortBy === "gap") return b.visibilityGap - a.visibilityGap;
-    return b.tdpi - a.tdpi;
+    if (sortBy === "gap") return (b.visibilityGap ?? 0) - (a.visibilityGap ?? 0);
+    return (b.baselineTdpi ?? b.tdpi) - (a.baselineTdpi ?? a.tdpi);
   });
 
   return (
@@ -163,7 +166,8 @@ export default function HotspotsPage() {
 
                   {/* Data rows */}
                   {sortedHotspots.map((cell) => {
-                    const severity = cell.tdpi > 70 ? "critical" : cell.tdpi > 40 ? "warning" : "success";
+                    const cellTdpi = cell.baselineTdpi ?? cell.tdpi;
+                    const severityColor = getSeverityCSS(cell.hotspotTier, cell.tdpiPercentile);
                     return (
                       <div
                         key={cell.h3Index}
@@ -179,14 +183,22 @@ export default function HotspotsPage() {
                         }}
                       >
                         <div>
-                          <div style={{ fontWeight: 700, color: "#f1f5f9" }}>{cell.name}</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <div style={{ fontWeight: 700, color: "#f1f5f9" }}>{cell.name}</div>
+                            <span 
+                              className={`px-2 py-0.5 rounded text-[9px] font-bold border ${getSeverityBadgeClass(cell.hotspotTier)}`}
+                            >
+                              {getSeverityLabel(cell.hotspotTier)}
+                            </span>
+                          </div>
                           <div style={{ fontSize: "9px", color: "var(--color-text-muted)", fontFamily: "monospace", marginTop: "2px" }}>
                             {cell.h3Index}
                           </div>
                         </div>
 
-                        <div style={{ fontWeight: 700, color: `var(--color-${severity})` }}>
-                          {cell.tdpi}%
+                        <div style={{ fontWeight: 700, color: severityColor, display: "flex", alignItems: "center", gap: "6px" }}>
+                          {React.createElement(getSeverityIcon(cell.hotspotTier), { size: 12 })}
+                          <span>{cellTdpi}%</span>
                         </div>
 
                         <div style={{ color: "#cbd5e1" }}>

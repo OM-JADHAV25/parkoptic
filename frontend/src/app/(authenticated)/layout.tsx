@@ -28,64 +28,64 @@ export default function AuthenticatedLayout({
 
       {/* 2. Premium Startup Boot Loader Sequence */}
       <AnimatePresence mode="wait">
-        {!isBooted ? (
+        {!isBooted && (
           <StartupLoader key="startup" onComplete={() => setIsBooted(true)} />
-        ) : (
-          <motion.div
-            key="dashboard-shell"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-            style={{
-              height: "100vh",
-              display: "flex",
-              flexDirection: "column",
-              padding: "24px",
-              paddingLeft: "338px",   /* 24px gap + 290px sidebar + 24px gap */
-              boxSizing: "border-box",
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-            {/* Sidebar Floating Console — fixed position, lives outside document flow */}
-            <Sidebar />
-
-            {/* Mobile backdrop overlay */}
-            {isSidebarOpen && (
-              <div
-                onClick={closeSidebar}
-                style={{
-                  position: "fixed",
-                  inset: 0,
-                  backgroundColor: "rgba(0,0,0,0.6)",
-                  backdropFilter: "blur(2px)",
-                  zIndex: 190,
-                }}
-                className="lg:hidden"
-              />
-            )}
-
-            {/* Main Command Workspace Section */}
-            <div
-              style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                gap: "24px",
-                minWidth: 0,
-                minHeight: 0,
-                position: "relative",
-              }}
-            >
-              <TopNavigation onToggleSidebar={toggleSidebar} />
-              <WorkspaceContainer>{children}</WorkspaceContainer>
-            </div>
-
-            {/* Floating AI Copilot Action Point */}
-            <AICopilotButton />
-          </motion.div>
         )}
       </AnimatePresence>
+      
+      <motion.div
+        key="dashboard-shell"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: isBooted ? 1 : 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        style={{
+          height: "100vh",
+          display: isBooted ? "flex" : "none",
+          flexDirection: "column",
+          padding: "24px",
+          paddingLeft: "338px",   /* 24px gap + 290px sidebar + 24px gap */
+          boxSizing: "border-box",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        {/* Sidebar Floating Console — fixed position, lives outside document flow */}
+        <Sidebar />
+
+        {/* Mobile backdrop overlay */}
+        {isSidebarOpen && (
+          <div
+            onClick={closeSidebar}
+            style={{
+              position: "fixed",
+              inset: 0,
+              backgroundColor: "rgba(0,0,0,0.6)",
+              backdropFilter: "blur(2px)",
+              zIndex: 190,
+            }}
+            className="lg:hidden"
+          />
+        )}
+
+        {/* Main Command Workspace Section */}
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            gap: "24px",
+            minWidth: 0,
+            minHeight: 0,
+            position: "relative",
+          }}
+        >
+          <TopNavigation onToggleSidebar={toggleSidebar} />
+          <WorkspaceContainer>{children}</WorkspaceContainer>
+        </div>
+
+        {/* Floating AI Copilot Action Point */}
+        <AICopilotButton />
+      </motion.div>
     </>
   );
 }

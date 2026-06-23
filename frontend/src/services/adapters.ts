@@ -231,27 +231,39 @@ export function adaptHotspotItem(item: any, index: number): H3GridCell {
   
   // Use temporal intelligence fields if available, otherwise fallback to baseline
   const tdpi = Math.round(
-    item.projected_tdpi !== undefined ? item.projected_tdpi :
-    item.operational_risk !== undefined ? item.operational_risk : 
-    (item.tdpi_score !== undefined ? item.tdpi_score : (item.tdpi?.tdpi_score || 0))
+    item.tdpi_score !== undefined && item.tdpi_score !== null
+        ? item.tdpi_score
+        : item.operational_risk !== undefined && item.operational_risk !== null
+            ? item.operational_risk
+            : item.projected_tdpi !== undefined && item.projected_tdpi !== null
+                ? item.projected_tdpi
+                : (item.tdpi?.tdpi_score || 0)
   );
-  const visibilityGap = Math.round(
-    item.visibility_gap_index !== undefined ? item.visibility_gap_index :
-    (item.visibility_gap?.visibility_gap_index || 0)
-  );
+
+  const rawVisibilityGap = item.visibility_gap_index !== undefined && item.visibility_gap_index !== null ? item.visibility_gap_index :
+    (item.visibility_gap?.visibility_gap_index !== undefined && item.visibility_gap?.visibility_gap_index !== null ? item.visibility_gap.visibility_gap_index : undefined);
+    
+  const visibilityGap = rawVisibilityGap !== undefined ? Math.round(rawVisibilityGap) : undefined;
+  
+  const rawCoverageScore = item.coverage_score !== undefined && item.coverage_score !== null ? item.coverage_score :
+    (item.visibility_gap?.coverage_score !== undefined && item.visibility_gap?.coverage_score !== null ? item.visibility_gap.coverage_score : undefined);
+
+  const coverageScore = rawCoverageScore !== undefined ? Math.round(rawCoverageScore) : undefined;
+
   const deploymentScore = Math.round(
-    item.deployment_score !== undefined ? item.deployment_score :
-    item.deployment?.deployment_score !== undefined ? item.deployment.deployment_score :
-    (tdpi * 0.7 + visibilityGap * 0.3)
+    item.deployment_score !== undefined && item.deployment_score !== null ? item.deployment_score :
+    item.deployment?.deployment_score !== undefined && item.deployment?.deployment_score !== null ? item.deployment.deployment_score :
+    (tdpi * 0.7 + (visibilityGap !== undefined ? visibilityGap : 0) * 0.3)
   );
-  const predictedRisk = item.projected_tdpi !== undefined ? item.projected_tdpi : 
-    item.hourly_estimate !== undefined ? item.hourly_estimate : 
-    item.tdpi_score !== undefined ? item.tdpi_score : 
-    (item.tdpi?.tdpi_score || 0);
+  
+  const predictedRisk = item.tdpi_score !== undefined && item.tdpi_score !== null ? item.tdpi_score : 
+    item.hourly_estimate !== undefined && item.hourly_estimate !== null ? item.hourly_estimate : 
+    item.projected_tdpi !== undefined && item.projected_tdpi !== null ? item.projected_tdpi
+    : (item.tdpi?.tdpi_score || 0);
 
   const name = getNeighborhoodName(lng, lat, `Grid Sector R${index}`);
   const forecastConfidence = parseFloat(
-    Math.min(0.99, Math.max(0.6, 0.95 - visibilityGap / 300)).toFixed(2)
+    Math.min(0.99, Math.max(0.6, 0.95 - (visibilityGap !== undefined ? visibilityGap : 0) / 300)).toFixed(2)
   );
 
   let explanation = item.executive_summary || item.deployment?.executive_summary || item.deployment?.recommendation_reason || "";
@@ -264,12 +276,16 @@ export function adaptHotspotItem(item: any, index: number): H3GridCell {
       explanation = `AI Priority is STABLE. Traffic congestion levels are low (${tdpi}%). `;
     }
 
-    if (visibilityGap > 70) {
-      explanation += `Risk is compounded by severe operational Visibility Gaps (${visibilityGap}%). Mapped zones are currently out of coverage, representing critical patrol priority.`;
-    } else if (visibilityGap > 40) {
-      explanation += `Visibility gaps are moderate (${visibilityGap}%). Recommended patrol routing covers spillover areas.`;
+    if (visibilityGap !== undefined) {
+      if (visibilityGap > 70) {
+        explanation += `Risk is compounded by severe operational Visibility Gaps (${visibilityGap}%). Mapped zones are currently out of coverage, representing critical patrol priority.`;
+      } else if (visibilityGap > 40) {
+        explanation += `Visibility gaps are moderate (${visibilityGap}%). Recommended patrol routing covers spillover areas.`;
+      } else {
+        explanation += `Visibility indicators are healthy. Region is securely monitored by nearby active patrols.`;
+      }
     } else {
-      explanation += `Visibility indicators are healthy. Region is securely monitored by nearby active patrols.`;
+      explanation += `Visibility indicators are currently unavailable for this sector.`;
     }
   }
 
@@ -287,14 +303,16 @@ export function adaptHotspotItem(item: any, index: number): H3GridCell {
     center: geom.center,
     vertices: geom.vertices,
     name,
+    // Projected TDPI. Used ONLY in Simulation Mode.
     tdpi,
     visibilityGap,
-    historicalViolations: Math.floor(10 + tdpi * 2.5),
+    historicalViolations: item.total_violations !== undefined ? Math.round(item.total_violations) : Math.floor(10 + tdpi * 2.5),
     forecastConfidence,
     deploymentScore,
     predictedRisk,
     explanation,
     assignedPatrols: [],
+    // Historical TDPI. Used in Observe and Plan modes.
     baselineTdpi: Math.round(item.tdpi_score !== undefined ? item.tdpi_score : (item.tdpi?.tdpi_score || 0)),
     violationsAddressed: Math.round(
       item.estimated_weekly_violations_addressed !== undefined ? item.estimated_weekly_violations_addressed :
@@ -306,11 +324,20 @@ export function adaptHotspotItem(item: any, index: number): H3GridCell {
       item.deployment?.coverage_score !== undefined ? item.deployment.coverage_score :
       0
     ),
+    // Forecast demand. Used ONLY in Predict Mode.
     forecastedDemand: Math.round(
       item.predicted_violations !== undefined ? item.predicted_violations :
       item.forecast?.predicted_violations !== undefined ? item.forecast.predicted_violations :
       0
     ),
+    // Backend AI recommendation. Never calculate on frontend.
+    recommendedPatrolUnits: Math.round(
+      item.recommended_patrol_units !== undefined ? item.recommended_patrol_units :
+      item.deployment?.recommended_patrol_units !== undefined ? item.deployment.recommended_patrol_units :
+      1
+    ),
+    hotspotTier: item.hotspot_tier !== undefined ? item.hotspot_tier : (item.tdpi?.hotspot_tier !== undefined ? item.tdpi.hotspot_tier : undefined),
+    tdpiPercentile: item.tdpi_percentile !== undefined ? item.tdpi_percentile : (item.tdpi?.tdpi_percentile !== undefined ? item.tdpi.tdpi_percentile : undefined),
   };
 }
 
@@ -329,7 +356,7 @@ export function adaptSimulationSummary(backendSimData: any): any {
   const baseline = backendSimData.baseline || [];
   const simulated = backendSimData.simulated || [];
 
-  const hotspotsBefore = baseline.filter((c: any) => (c.projected_tdpi || c.tdpi_score || 0) > 65).length;
+  const hotspotsBefore = baseline.filter((c: any) => (c.tdpi_score || 0) > 65).length;
   const hotspotsAfter = simulated.filter((c: any) => (c.projected_tdpi || c.tdpi_score || 0) > 65).length;
 
   const currentVisibilityGap = Math.round(baseline.reduce((acc: number, c: any) => acc + (c.visibility_gap_index !== undefined ? c.visibility_gap_index : (c.visibility_gap?.visibility_gap_index || 0)), 0) / (baseline.length || 1));
@@ -345,7 +372,7 @@ export function adaptSimulationSummary(backendSimData: any): any {
   const deploymentBenefitScore = Math.min(100, Math.max(0, Math.round(improvementScore + roiScore)));
 
   return {
-    currentTdpi: Math.round(summary.baseline_avg_projected_tdpi || 0),
+    currentTdpi: Math.round(baseline.reduce((sum:number,c:any)=>sum+(c.tdpi_score||0),0)/(baseline.length||1)),
     projectedTdpi: Math.round(summary.simulated_avg_projected_tdpi || 0),
     currentVisibilityGap,
     projectedVisibilityGap,
@@ -405,7 +432,7 @@ export function adaptPatrolOptimizations(recommendations: any[], squads: any[]):
       spatialCriticality: rec.spatial_criticality || 0,
       hotspotTier: rec.hotspot_tier || "NORMAL",
       deploymentRank: rec.deployment_rank || (idx + 1),
-      percentileRank: percentileRank,
+      tdpiPercentile: rec.tdpi_percentile !== undefined ? rec.tdpi_percentile : undefined,
       recommendedPatrolUnits: rec.recommended_patrol_units || 1,
       historicalEnforcementRate: rec.historical_enforcement_rate || 0,
       estimatedTdpiReduction: rec.estimated_tdpi_reduction || 0,
